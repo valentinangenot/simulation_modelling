@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Simulateur – Deux masses couplées par un ressort</title>
+<title>Valentin Angenot - Simulateur – Deux masses couplées par un ressort</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <style>
@@ -96,21 +96,20 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 
 <div class="header">
   <h1>⚙ Simulateur — Deux masses couplées par un ressort</h1>
-  <button class="help-toggle on" id="helpBtn" onclick="toggleHelp()">? Explications</button>
+  <button class="help-toggle on" id="helpBtn" onclick="toggleHelp()">Explications</button>
 </div>
 
 <div class="intro show" id="intro">
   <div class="intro-text">
-    <b>Le système :</b> Deux masses ponctuelles dans un plan <b>sans gravité</b>.
-    <span class="m1">m₁</span> (bleue) glisse <b>sans friction</b> sur un <b>cercle</b> de rayon R.
-    <span class="m2">m₂</span> (orange) glisse sur une <b>ellipse</b> (demi-axes 3R/8 et R/8) avec
+    <</b>Système :</b> Deux masses ponctuelles dans un plan <b>sans gravité</b>.
+    <span class="m1">m₁</span> contraint sur un <b>cercle</b> de rayon R, <b>sans friction</b>.
+    <span class="m2">m₂</span> contraint sur une <b>ellipse</b> (demi-axes 3R/8 et R/8) avec
     <b>friction visqueuse</b>.
-    Un <span class="sp">ressort</span> (vert) de longueur naturelle l₀ = R et de raideur k les relie.
+    Un <span class="sp">ressort</span> de longueur naturelle l₀ = R et de raideur k les relie.
     <br><br>
     Positions repérées par <b>θ</b> (m₁, cercle) et <b>φ</b> (m₂, ellipse) :
     0 = droite, π/2 = haut, π = gauche.
-    La simulation tourne en variables <b>adimensionnées</b> (τ, Ê), mais les grandeurs physiques (mètres, secondes, joules) sont affichées partout.
-  </div>
+La simulation est réalisée en variables <b>adimensionnées</b> (τ, Ê), tandis que les grandeurs physiques correspondantes sont affichées afin de faciliter l’interprétation physique du système.  </div>
   <div class="intro-diagram"><canvas id="cDia"></canvas></div>
 </div>
 
@@ -124,7 +123,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
       <button class="btn" onclick="resetSim()">↺ Reset</button>
     </div>
     <div class="speed-row">
-      <span>Vitesse</span>
+      <span>Vitesse de simulation</span>
       <input type="range" id="sSpeed" min="0.1" max="15" step="0.1" value="1">
       <span class="v" id="vSpeed">1.0×</span>
     </div>
@@ -140,20 +139,20 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
     </div>
 
     <div class="prow">
-      <div class="prow-head"><span class="prow-name">m₁ — masse sur le cercle</span><span class="prow-val" id="vM1">1.00 kg</span></div>
-      <div class="prow-desc" id="dM1">Masse de la particule bleue. Pas de friction sur m₁.</div>
-      <input type="range" id="sM1" min="0.1" max="20" step="0.1" value="1">
+      <div class="prow-head"><span class="prow-name">m₁</span><span class="prow-val" id="vM1">1.00 kg</span></div>
+      <div class="prow-desc" id="dM1">Pas de friction sur m₁.</div>
+      <input type="range" id="sM1" min="0.1" max="50" step="0.1" value="1">
     </div>
 
     <div class="prow">
       <div class="prow-head"><span class="prow-name">k — raideur du ressort</span><span class="prow-val" id="vK">10.0 N/m</span></div>
       <div class="prow-desc" id="dK">Raideur du ressort linéaire. Plus k est grand, plus les oscillations sont rapides.</div>
-      <input type="range" id="sK" min="0.5" max="100" step="0.5" value="10">
+      <input type="range" id="sK" min="1" max="1000" step="1" value="10">
     </div>
 
     <div class="prow">
       <div class="prow-head"><span class="prow-name">μ = m₂ / m₁</span><span class="prow-val" id="vMu">1.00</span></div>
-      <div class="prow-desc" id="dMu">Rapport de masse. Petit → m₂ légère. Grand → m₂ lourde.</div>
+      <div class="prow-desc" id="dMu">Rapport de masse. Petit → m₂ légère relativement à m₁.</div>
       <input type="range" id="sMu" min="0.05" max="10" step="0.05" value="1">
     </div>
 
@@ -177,7 +176,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
     </div>
     <div class="prow">
       <div class="prow-head"><span class="prow-name">φ₀ — angle de m₂</span><span class="prow-val" id="vPh0">0.00 rad</span></div>
-      <div class="prow-desc" id="dPh0">Position de m₂ sur l'ellipse. 0 = extrémité droite.</div>
+      <div class="prow-desc" id="dPh0">Position de m₂ sur l'ellipse. </div>
       <input type="range" id="sPh0" min="-3.14" max="3.14" step="0.01" value="0">
     </div>
     <div class="prow">
@@ -199,14 +198,14 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
       <button class="btn" onclick="preset(1)">Amorti doux</button>
     </div>
     <div class="btns">
-      <button class="btn" onclick="preset(2)">m₂ lourde</button>
+      <button class="btn" onclick="preset(2)">m₂ "lourde"</button>
       <button class="btn" onclick="preset(3)">Forte friction</button>
     </div>
     <div class="btns">
       <button class="btn" onclick="preset(4)">m₁ lancée seule</button>
       <button class="btn" onclick="preset(5)">Haute énergie</button>
     </div>
-    <div class="ptitle" style="margin-top:12px">🔮 Prédiction (pré-simulation)</div>
+    <div class="ptitle" style="margin-top:12px">🔮 Brève description de la simulation</div>
     <div class="predict-box" id="predictBox">Analyse en cours…</div>
   </div>
 
