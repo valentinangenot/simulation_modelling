@@ -6,6 +6,7 @@
 <title>Valentin Angenot - Simulateur – Deux masses couplées par un ressort</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -21,8 +22,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 
 .header{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--bg2);border-bottom:1px solid var(--border)}
 .header h1{font:500 13px/1 'JetBrains Mono',monospace;color:var(--bright)}
-.help-toggle{font:500 11px/1 'JetBrains Mono',monospace;padding:5px 10px;border-radius:4px;cursor:pointer;background:var(--border);color:var(--dim);border:1px solid var(--border-hi);transition:all .15s}
+.header-right{display:flex;gap:8px;align-items:center}
+.help-toggle,.pdf-btn{font:500 11px/1 'JetBrains Mono',monospace;padding:5px 10px;border-radius:4px;cursor:pointer;background:var(--border);color:var(--dim);border:1px solid var(--border-hi);transition:all .15s}
 .help-toggle:hover,.help-toggle.on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.pdf-btn:hover{background:#50e3c2;color:var(--bg);border-color:#50e3c2}
+.pdf-btn.busy{opacity:.5;pointer-events:none}
 
 .intro{flex:0 0 auto;display:none;padding:14px 20px;background:var(--bg2);border-bottom:1px solid var(--border);gap:16px;align-items:stretch;overflow:hidden}
 .intro.show{display:flex}
@@ -96,12 +100,15 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 
 <div class="header">
   <h1>⚙ Simulateur — Deux masses couplées par un ressort</h1>
-  <button class="help-toggle on" id="helpBtn" onclick="toggleHelp()">Explications</button>
+  <div class="header-right">
+    <button class="pdf-btn" id="pdfBtn" onclick="downloadPDF()">Exporter PDF</button>
+    <button class="help-toggle on" id="helpBtn" onclick="toggleHelp()">Explications</button>
+  </div>
 </div>
 
 <div class="intro show" id="intro">
   <div class="intro-text">
-    <</b>Système :</b> Deux masses ponctuelles dans un plan <b>sans gravité</b>.
+    <b>Système :</b> Deux masses ponctuelles dans un plan <b>sans gravité</b>.
     <span class="m1">m₁</span> contraint sur un <b>cercle</b> de rayon R, <b>sans friction</b>.
     <span class="m2">m₂</span> contraint sur une <b>ellipse</b> (demi-axes 3R/8 et R/8) avec
     <b>friction visqueuse</b>.
@@ -109,7 +116,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
     <br><br>
     Positions repérées par <b>θ</b> (m₁, cercle) et <b>φ</b> (m₂, ellipse) :
     0 = droite, π/2 = haut, π = gauche.
-La simulation est réalisée en variables <b>adimensionnées</b> (τ, Ê), tandis que les grandeurs physiques correspondantes sont affichées afin de faciliter l’interprétation physique du système.  </div>
+La simulation est réalisée en variables <b>adimensionnées</b> (τ, Ê), tandis que les grandeurs physiques correspondantes sont affichées afin de faciliter l'interprétation physique du système.  </div>
   <div class="intro-diagram"><canvas id="cDia"></canvas></div>
 </div>
 
@@ -262,9 +269,9 @@ function phys(){
   const alpha=beta*sqrt(k*m1);
   const l0=R;
   const a_semi=3*R/8, b_semi=R/8;
-  const Escale=k*R*R; // 1 unit of Ê = k R² joules
-  const Tscale=1/omega0; // 1 unit of τ = 1/ω₀ seconds
-  const Vscale=R*omega0; // velocity scale m/s
+  const Escale=k*R*R;
+  const Tscale=1/omega0;
+  const Vscale=R*omega0;
   return{R,m1,m2,k,mu,beta,alpha,omega0,l0,a_semi,b_semi,Escale,Tscale,Vscale};
 }
 
@@ -305,13 +312,11 @@ function drawDia(){
   c.setLineDash([4,3]);
   c.beginPath();c.arc(mx,my,sc,0,2*PI);c.strokeStyle='#2a3a5c';c.lineWidth=1.2;c.stroke();
 
-  // ellipse with correct proportions
   const eRatioX=3/8, eRatioY=1/8;
   c.beginPath();
   for(let i=0;i<=100;i++){const a=i/100*2*PI;i?c.lineTo(mx+eRatioX*sc*cos(a),my-eRatioY*sc*sin(a)):c.moveTo(mx+eRatioX*sc*cos(a),my-eRatioY*sc*sin(a))}
   c.closePath();c.strokeStyle='#3a2a00';c.stroke();c.setLineDash([]);
 
-  // ref axis
   c.beginPath();c.moveTo(mx,my);c.lineTo(mx+sc*.35,my);c.strokeStyle='#2a3a5c';c.lineWidth=.8;c.stroke();
 
   const th=.7,ph=.4;
@@ -338,7 +343,6 @@ function drawDia(){
   c.fillStyle='#50e3c2';c.font='9px "DM Sans",sans-serif';
   c.fillText('k = '+p.k+' N/m',(x1+x2)/2-24,(y1+y2)/2-7);
 
-  // dimension labels
   c.fillStyle='#2a3a5c';c.font='9px "JetBrains Mono",monospace';
   c.fillText('R = '+p.R.toFixed(2)+' m',mx+sc*0.5,my+sc*0.25);
   c.fillText(fmt(p.a_semi,2)+'m × '+fmt(p.b_semi,2)+'m',mx-sc*0.15,my+eRatioY*sc+12);
@@ -351,14 +355,11 @@ function drawSys(){
   const mx=W/2,my=H/2,sc=min(W,H)*.34;
   const eRx=3/8,eRy=1/8;
 
-  // circle track
   c.beginPath();c.arc(mx,my,sc,0,2*PI);c.strokeStyle='#1a2540';c.lineWidth=1.5;c.stroke();
-  // ellipse track
   c.beginPath();
   for(let i=0;i<=200;i++){const a=i/200*2*PI;i?c.lineTo(mx+eRx*sc*cos(a),my-eRy*sc*sin(a)):c.moveTo(mx+eRx*sc*cos(a),my-eRy*sc*sin(a))}
   c.closePath();c.strokeStyle='#2a1f00';c.lineWidth=1.5;c.stroke();
 
-  // dimension annotations
   c.font='8px "JetBrains Mono",monospace';c.fillStyle='#1e3050';c.textAlign='center';
   c.fillText(p.R.toFixed(2)+' m',mx+sc+18,my);
   c.fillText(fmt(p.a_semi,2)+' m',mx,my-eRy*sc-6);
@@ -369,10 +370,9 @@ function drawSys(){
 
   drawSpring(c,x1,y1,x2,y2);
 
-  // m1
   c.beginPath();c.arc(x1,y1,7,0,2*PI);c.fillStyle='#4facfe';c.fill();c.strokeStyle='#2980d4';c.lineWidth=1.5;c.stroke();
   const g1=c.createRadialGradient(x1,y1,0,x1,y1,15);g1.addColorStop(0,'rgba(79,172,254,.25)');g1.addColorStop(1,'rgba(79,172,254,0)');c.fillStyle=g1;c.beginPath();c.arc(x1,y1,15,0,2*PI);c.fill();
-  // m2
+
   c.beginPath();c.arc(x2,y2,7,0,2*PI);c.fillStyle='#f5a623';c.fill();c.strokeStyle='#c47d10';c.lineWidth=1.5;c.stroke();
   const g2=c.createRadialGradient(x2,y2,0,x2,y2,15);g2.addColorStop(0,'rgba(245,166,35,.25)');g2.addColorStop(1,'rgba(245,166,35,0)');c.fillStyle=g2;c.beginPath();c.arc(x2,y2,15,0,2*PI);c.fill();
 
@@ -381,15 +381,12 @@ function drawSys(){
   c.fillStyle='#f5a623';c.fillText('m₂',x2+10,y2-7);
   c.beginPath();c.arc(mx,my,2,0,2*PI);c.fillStyle='#5a6f8a';c.fill();
 
-  // HUD with physical units
   const e=nrg(S,p.mu);
   const t_s=tau*p.Tscale;
   const E_J=e.E*p.Escale;
   const K1J=e.K1*p.Escale, K2J=e.K2*p.Escale, PJ=e.P*p.Escale;
   const l_m=e.lR*p.R;
-  // |v₁| = |θ'| · ω₀ · R
   const v1=abs(S[2])*p.R*p.omega0;
-  // |v₂| = |φ'| · ω₀ · R · √(9sin²φ + cos²φ) / 8
   const v2=abs(S[3])*p.R*p.omega0*sqrt(9*sin(S[1])**2+cos(S[1])**2)/8;
 
   const fa=a=>{let v=a%(2*PI);if(v>PI)v-=2*PI;if(v<-PI)v+=2*PI;return v.toFixed(2)};
@@ -422,7 +419,6 @@ function drawE(){
   const gw=W-P_.l-P_.r,gh=H-P_.t-P_.b;
   const t0=h.t[0],t1=h.t[h.t.length-1],ts=max(t1-t0,1);
   let eM=0;for(let i=0;i<h.E.length;i++)eM=max(eM,h.E[i]);eM=max(eM*1.15,.001);
-  const eM_J=eM*p.Escale;
 
   const tx=t=>P_.l+(t-t0)/ts*gw;
   const ty=v=>P_.t+gh-v/eM*gh;
@@ -468,56 +464,36 @@ function onePhase(c,tr,col,ox,w,title,xl,yl){
   let xn=1e9,xx=-1e9,yn=1e9,yx=-1e9;tr.forEach(([x,y])=>{xn=min(xn,x);xx=max(xx,x);yn=min(yn,y);yx=max(yx,y)});
   const sp=max(max(xx-xn,.2),max(yx-yn,.2))*.6;const xm=(xn+xx)/2,ym=(yn+yx)/2;
   const tx=v=>ox+P.l+gw/2+(v-xm)/sp*gw*.45;const ty=v=>P.t+gh/2-(v-ym)/sp*gh*.45;
-
-  // zero axes with labels
   c.strokeStyle='#1a2540';c.lineWidth=.5;
   const y0=ty(0);
   if(y0>P.t&&y0<P.t+gh){
     c.beginPath();c.moveTo(ox+P.l,y0);c.lineTo(ox+P.l+gw,y0);c.stroke();
-    // "vitesse = 0" label on zero line
     c.font='8px "DM Sans",sans-serif';c.fillStyle='#253045';c.textAlign='left';
     c.fillText('vitesse = 0',ox+P.l+2,y0-3);
   }
   const x0=tx(0);
   if(x0>ox+P.l&&x0<ox+P.l+gw){c.beginPath();c.moveTo(x0,P.t);c.lineTo(x0,P.t+gh);c.stroke()}
-
-  // trail with fade
   const n=tr.length,fs=max(0,n-1200);
   for(let i=fs+1;i<n;i++){
-    c.beginPath();
-    c.moveTo(tx(tr[i-1][0]),ty(tr[i-1][1]));
-    c.lineTo(tx(tr[i][0]),ty(tr[i][1]));
+    c.beginPath();c.moveTo(tx(tr[i-1][0]),ty(tr[i-1][1]));c.lineTo(tx(tr[i][0]),ty(tr[i][1]));
     c.strokeStyle=col;c.globalAlpha=(i-fs)/(n-fs)*.6;c.lineWidth=1.2;c.stroke();
   }
   c.globalAlpha=1;
-
-  // current point with label
-  const last=tr[n-1];
-  const px=tx(last[0]),py=ty(last[1]);
-  c.beginPath();c.arc(px,py,5,0,2*PI);c.fillStyle=col;c.fill();
-  // "maintenant" label
+  const last=tr[n-1];const px_=tx(last[0]),py_=ty(last[1]);
+  c.beginPath();c.arc(px_,py_,5,0,2*PI);c.fillStyle=col;c.fill();
   c.font='600 8px "JetBrains Mono",monospace';c.fillStyle=col;c.textAlign='left';
-  c.fillText('●  maintenant',px+8,py+3);
-
-  // start point if visible
+  c.fillText('●  maintenant',px_+8,py_+3);
   if(tr.length>20){
-    const first=tr[0];
-    const fx=tx(first[0]),fy=ty(first[1]);
+    const first=tr[0];const fx=tx(first[0]),fy=ty(first[1]);
     c.beginPath();c.arc(fx,fy,3,0,2*PI);c.fillStyle='#5a6f8a';c.fill();
     c.font='8px "DM Sans",sans-serif';c.fillStyle='#5a6f8a';c.textAlign='left';
     c.fillText('t=0',fx+6,fy+3);
   }
-
-  // title
   c.font='600 10px "JetBrains Mono",monospace';c.fillStyle=col;c.textAlign='left';
   c.fillText(title,ox+P.l,P.t+12);
-
-  // axis labels
   c.font='9px "JetBrains Mono",monospace';c.fillStyle='#3d5070';c.textAlign='center';
   c.fillText(xl,ox+P.l+gw/2,H-6);
   c.save();c.translate(ox+6,P.t+gh/2);c.rotate(-PI/2);c.fillText(yl,0,0);c.restore();
-
-  // tick values
   c.font='8px "JetBrains Mono",monospace';c.fillStyle='#2e3d56';c.textAlign='center';
   c.fillText((xm-sp*.45).toFixed(1),ox+P.l,P.t+gh+12);
   c.fillText((xm+sp*.45).toFixed(1),ox+P.l+gw,P.t+gh+12);
@@ -536,7 +512,6 @@ function drawG(){
   [{v:e.K1/E,x:pd_.l+wK1/2,l:'K₁'},{v:e.K2/E,x:pd_.l+wK1+wK2/2,l:'K₂'},{v:e.P/E,x:pd_.l+wK1+wK2+wP/2,l:'P'}]
     .forEach(q=>{if(q.v*bw>26)c.fillText(`${q.l} ${(q.v*100).toFixed(0)}%`,q.x,by+bh/2+3)});
 
-  // gauge
   const gy=by+bh+28,gx=W/2,gr=min(50,W*.16);
   c.beginPath();c.arc(gx,gy+55,gr,PI,0);c.strokeStyle='#1a2540';c.lineWidth=7;c.lineCap='round';c.stroke();
   const lr=e.lR,nm=max(0,min(1,(lr-.5)/1)),ang=PI*(1-nm);
@@ -605,119 +580,74 @@ function preset(i){
 
 /* ═══════════════ PRE-SIMULATION ANALYSIS ═══════════════ */
 function analyze(mu,beta,ic){
-  let y=[...ic];const dt=.02,steps=20000,tEnd=400;
+  let y=[...ic];const dt=.02,steps=60000;
   const e0=nrg(y,mu);const E0=e0.E;
-  const K1_0=e0.K1, K2_0=e0.K2, P0=e0.P;
-
+  const K1_0=e0.K1,K2_0=e0.K2,P0=e0.P;
   let tau90=-1,tau99=-1,tau50=-1;
   let Ef=E0,K1f=e0.K1,K2f=e0.K2,Pf=e0.P;
   let tdF=y[2],pdF=y[3];
-  let mxK1=0,mxK2=0,mxP=0;
-  let mxK1_tau=0,mxK2_tau=0;
+  let mxK1=0,mxK2=0,mxP=0,mxK1_tau=0,mxK2_tau=0;
   let tdMx=abs(y[2]),pdMx=abs(y[3]);
-  let m2Stop=-1, m1Stop=-1;
-  // energy at a few checkpoints
-  let E_at={};
-  const checkpoints=[10,25,50,100,200];
-
+  let m2Stop=-1,m1Stop=-1;
   for(let i=0;i<steps;i++){
-    y=rk4(y,dt,mu,beta);
-    const t=(i+1)*dt;
-    const e=nrg(y,mu);const Et=e.E;
-
-    if(E0>1e-8){
-      const lost=1-Et/E0;
-      if(tau50<0&&lost>.5)tau50=t;
-      if(tau90<0&&lost>.9)tau90=t;
-      if(tau99<0&&lost>.99)tau99=t;
-      if(Et>1e-8){
-        const f1=e.K1/Et,f2=e.K2/Et,fP=e.P/Et;
-        if(f1>mxK1){mxK1=f1;mxK1_tau=t}
-        if(f2>mxK2){mxK2=f2;mxK2_tau=t}
-        mxP=max(mxP,fP);
-      }
-    }
+    y=rk4(y,dt,mu,beta);const t=(i+1)*dt;const e=nrg(y,mu);const Et=e.E;
+    if(E0>1e-8){const lost=1-Et/E0;if(tau50<0&&lost>.5)tau50=t;if(tau90<0&&lost>.9)tau90=t;if(tau99<0&&lost>.99)tau99=t;
+      if(Et>1e-8){const f1=e.K1/Et,f2=e.K2/Et;if(f1>mxK1){mxK1=f1;mxK1_tau=t}if(f2>mxK2){mxK2=f2;mxK2_tau=t}mxP=max(mxP,e.P/Et)}}
     tdMx=max(tdMx,abs(y[2]));pdMx=max(pdMx,abs(y[3]));
     if(m2Stop<0&&abs(y[3])<.01&&abs(y[2])>.05&&t>5)m2Stop=t;
     if(m1Stop<0&&abs(y[2])<.01&&abs(y[3])>.05&&t>5)m1Stop=t;
     if(i>steps*.85){Ef=Et;K1f=e.K1;K2f=e.K2;Pf=e.P;tdF=y[2];pdF=y[3]}
-
-    const tRound=Math.round(t);
-    if(checkpoints.includes(tRound)&&!E_at[tRound]) E_at[tRound]={E:Et,K1:e.K1,K2:e.K2,P:e.P};
   }
-
-  return{E0,K1_0,K2_0,P0,Ef,K1f,K2f,Pf,tau50,tau90,tau99,
-         tdF,pdF,mxK1,mxK2,mxP,mxK1_tau,mxK2_tau,
-         tdMx,pdMx,m2Stop,m1Stop,mu,beta,E_at}
+  return{E0,K1_0,K2_0,P0,Ef,K1f,K2f,Pf,tau50,tau90,tau99,tdF,pdF,mxK1,mxK2,mxP,mxK1_tau,mxK2_tau,tdMx,pdMx,m2Stop,m1Stop,mu,beta}
 }
-
 function genText(a,p){
-  const s=[]; // sections
-  const ts=t=>fmt(t*p.Tscale,2)+'s'; // tau → seconds
-  const eJ=e=>fmt(e*p.Escale,4)+'J'; // dimless → joules
+  const s=[];
+  const ts=t=>fmt(t*p.Tscale,2)+'s';
+  const eJ=e=>fmt(e*p.Escale,4)+'J';
   const pct1=v=>(v*100).toFixed(0)+'%';
   const pctLost=a.E0>1e-8?((1-a.Ef/a.E0)*100):0;
-
-  // ── 1. Résumé du scénario
-  let intro='Une masse m₁ = '+p.m1.toFixed(1)+'kg sur un cercle de rayon '+p.R.toFixed(2)+'m';
-  intro+=', reliée par un ressort (k = '+p.k.toFixed(1)+'N/m) à m₂ = '+p.m2.toFixed(1)+'kg sur une ellipse.';
+  let intro='m₁ = '+p.m1.toFixed(1)+'kg (cercle R = '+p.R.toFixed(2)+'m), ressort k = '+p.k.toFixed(1)+'N/m, m₂ = '+p.m2.toFixed(1)+'kg (ellipse).';
   if(a.beta===0) intro+=' Aucune friction.';
-  else intro+=' Friction sur m₂ : β = '+a.beta.toFixed(2)+' (α = '+fmt(p.alpha,2)+'N·s/m).';
+  else intro+=' Friction sur m₂ : β = '+a.beta.toFixed(2)+' (α = '+fmt(p.alpha,2)+' N·s/m).';
   s.push(intro);
-
-  // ── 2. Énergie initiale
-  const Ef1=a.K1_0/max(a.E0,1e-12), Ef2=a.K2_0/max(a.E0,1e-12);
+  const Ef1=a.K1_0/max(a.E0,1e-12),Ef2=a.K2_0/max(a.E0,1e-12);
   let e0desc='Énergie initiale : '+eJ(a.E0);
-  if(Ef1>.9) e0desc+=' (quasi-toute dans K₁ : m₁ est lancée).';
-  else if(Ef2>.9) e0desc+=' (quasi-toute dans K₂ : m₂ est lancée).';
+  if(Ef1>.9) e0desc+=' (quasi-toute dans K₁).';
+  else if(Ef2>.9) e0desc+=' (quasi-toute dans K₂).';
   else if(Ef1<.1&&Ef2<.1) e0desc+=' (stockée dans le ressort).';
   else e0desc+=' (K₁ '+pct1(Ef1)+', K₂ '+pct1(Ef2)+', P '+pct1(1-Ef1-Ef2)+').';
   s.push(e0desc);
-
-  // ── 3. Évolution de l'énergie
   if(a.beta===0){
-    s.push('Conservation : l\'énergie totale restera constante à '+eJ(a.E0)+'. On observera des transferts cycliques entre K₁, K₂ et P — le ressort redistribue en permanence.');
-    if(a.mxK1>.7&&a.mxK2>.7) s.push('Par moments K₁ atteint '+pct1(a.mxK1)+' et K₂ atteint '+pct1(a.mxK2)+' : transferts importants entre les deux masses.');
+    s.push('Énergie conservée à '+eJ(a.E0)+'. Transferts cycliques entre K₁, K₂ et P.');
+    if(a.mxK1>.7&&a.mxK2>.7) s.push('K₁ atteint '+pct1(a.mxK1)+' max, K₂ '+pct1(a.mxK2)+' max : transferts importants.');
   } else {
     let evol='Dissipation : ';
     if(pctLost>99){
-      evol+='l\'énergie sera presque totalement absorbée par la friction.';
-      if(a.tau50>0) evol+=' Moitié perdue en '+ts(a.tau50)+'.';
-      if(a.tau90>0) evol+=' À '+ts(a.tau90)+', 90% dissipés.';
-      if(a.tau99>0) evol+=' Quasi-arrêt à '+ts(a.tau99)+'.';
-    } else if(pctLost>50){
-      evol+=pctLost.toFixed(0)+'% de l\'énergie sera dissipée sur la durée simulée ('+ts(400)+').';
-      if(a.tau50>0) evol+=' Moitié perdue en '+ts(a.tau50)+'.';
+      evol+='énergie quasi-totalement dissipée.';
+      if(a.tau50>0) evol+=' 50% en '+ts(a.tau50)+'.';
       if(a.tau90>0) evol+=' 90% en '+ts(a.tau90)+'.';
+      if(a.tau99>0) evol+=' 99% en '+ts(a.tau99)+'.';
+    } else if(pctLost>50){
+      evol+=pctLost.toFixed(0)+'% dissipés en '+ts(400)+'.';
+      if(a.tau50>0) evol+=' 50% en '+ts(a.tau50)+'.';
     } else {
-      evol+='seulement '+pctLost.toFixed(0)+'% dissipés après '+ts(400)+'. Il reste '+eJ(a.Ef)+' sur '+eJ(a.E0)+' initiaux.';
+      evol+=pctLost.toFixed(0)+'% dissipés après '+ts(400)+'. Il reste '+eJ(a.Ef)+' sur '+eJ(a.E0)+'.';
     }
     s.push(evol);
   }
-
-  // ── 4. État final et comportement remarquable
-  const Efmax=max(a.Ef,1e-12);
-  const f1=a.K1f/Efmax, f2=a.K2f/Efmax;
-
+  const Efmax=max(a.Ef,1e-12);const f1=a.K1f/Efmax,f2=a.K2f/Efmax;
   if(a.m2Stop>0&&abs(a.tdF)>.05){
-    s.push('Fait notable : m₂ s\'immobilise vers '+ts(a.m2Stop)+', mais m₁ continue de tourner à θ\' ≈ '+a.tdF.toFixed(2)+' rad/τ (v₁ ≈ '+fmt(abs(a.tdF)*p.Vscale,2)+'m/s). Comme m₁ n\'a pas de friction, son énergie cinétique ('+eJ(a.K1f)+', soit '+pct1(f1)+' du total) est piégée indéfiniment. Le ressort ne peut plus la drainer.');
-  } else if(a.beta>0&&abs(a.tdF)>.05&&abs(a.pdF)<.02){
-    s.push('m₁ garde une rotation résiduelle (θ\' ≈ '+a.tdF.toFixed(2)+', v ≈ '+fmt(abs(a.tdF)*p.Vscale,2)+'m/s) tandis que m₂ est au repos. Le couplage via le ressort est devenu inefficace dans cette configuration géométrique.');
+    s.push('m₂ s\'immobilise vers '+ts(a.m2Stop)+', m₁ continue (v₁ ≈ '+fmt(abs(a.tdF)*p.Vscale,2)+' m/s). K₁ = '+eJ(a.K1f)+' ('+pct1(f1)+') piégée : pas de friction sur m₁.');
   } else if(a.beta>0&&abs(a.tdF)<.02&&abs(a.pdF)<.02&&a.Ef<a.E0*.01){
-    s.push('Les deux masses convergent vers le repos complet. L\'énergie résiduelle est négligeable ('+eJ(a.Ef)+').');
+    s.push('Les deux masses convergent au repos. Énergie résiduelle : '+eJ(a.Ef)+'.');
   } else if(a.beta>0&&a.Ef>a.E0*.01){
-    let fin='À la fin de la simulation, il reste '+eJ(a.Ef)+' ('+pct1(1-pctLost/100)+' de l\'énergie initiale)';
-    if(f1>.7) fin+=', concentrée à '+pct1(f1)+' dans K₁.';
-    else if(f2>.7) fin+=', concentrée à '+pct1(f2)+' dans K₂.';
-    else fin+=', répartie entre K₁ ('+pct1(f1)+'), K₂ ('+pct1(f2)+') et P ('+pct1(1-f1-f2)+').';
+    let fin='Énergie restante : '+eJ(a.Ef);
+    if(f1>.7) fin+=', '+pct1(f1)+' dans K₁.';
+    else if(f2>.7) fin+=', '+pct1(f2)+' dans K₂.';
+    else fin+='.';
     s.push(fin);
   }
-
-  // ── 5. Remarque physique si β très élevé
-  if(a.beta>3&&a.Ef>a.E0*.15){
-    s.push('Avec un amortissement aussi élevé (β = '+a.beta.toFixed(1)+'), la friction bloque m₂ presque instantanément, ce qui « déconnecte » le couplage. Paradoxalement, augmenter la friction peut ralentir la dissipation totale.');
-  }
-
+  if(a.beta>3&&a.Ef>a.E0*.15) s.push('β = '+a.beta.toFixed(1)+' élevé : m₂ bloquée rapidement, couplage via le ressort affaibli.');
   return s.join('\n\n');
 }
 function runAnalysis(){
@@ -727,6 +657,265 @@ function runAnalysis(){
   $('predictBox').textContent=genText(a,p);
 }
 
+
+/* ═══════════════ REPORT EXPORT ═══════════════ */
+
+function fullSim(mu,beta,ic,tauEnd,nSamples){
+  let y=[...ic]; const dt=0.01;
+  const sps=Math.round(tauEnd/nSamples/dt);
+  const r={t:[],K1:[],K2:[],P:[],E:[],lR:[],th:[],ph:[],thd:[],phd:[]};
+  const e0=nrg(y,mu);
+  r.t.push(0);r.K1.push(e0.K1);r.K2.push(e0.K2);r.P.push(e0.P);r.E.push(e0.E);r.lR.push(e0.lR);
+  r.th.push(y[0]);r.ph.push(y[1]);r.thd.push(y[2]);r.phd.push(y[3]);
+  let t=0;
+  for(let s=0;s<nSamples;s++){
+    for(let i=0;i<sps;i++){y=rk4(y,dt,mu,beta);t+=dt;}
+    const e=nrg(y,mu);
+    r.t.push(t);r.K1.push(e.K1);r.K2.push(e.K2);r.P.push(e.P);r.E.push(e.E);r.lR.push(e.lR);
+    r.th.push(y[0]);r.ph.push(y[1]);r.thd.push(y[2]);r.phd.push(y[3]);
+  }
+  return r;
+}
+
+function rptChart(o){
+  const W=o.w||1200,H=o.h||400;
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;
+  const c=cv.getContext('2d');
+  c.fillStyle='#fff';c.fillRect(0,0,W,H);
+  const m={l:70,r:20,t:14,b:40};
+  const gw=W-m.l-m.r,gh=H-m.t-m.b;
+  const n=o.x.length;
+  const x0_=o.x[0],x1_=o.x[n-1],xs_=max(x1_-x0_,1e-12);
+  let yMx=0;o.lines.forEach(l=>{for(let i=0;i<n;i++)yMx=max(yMx,l.d[i]||0);});
+  yMx=max(yMx*1.12,1e-6);
+  const tx=i=>m.l+(o.x[i]-x0_)/xs_*gw;
+  const ty=v=>m.t+gh-v/yMx*gh;
+  c.strokeStyle='#e5e7eb';c.lineWidth=.7;c.font='11px sans-serif';c.fillStyle='#6b7280';c.textAlign='right';
+  for(let i=0;i<=5;i++){const yy=m.t+i*gh/5;c.beginPath();c.moveTo(m.l,yy);c.lineTo(m.l+gw,yy);c.stroke();const v=yMx*(5-i)/5*(o.ys||1);c.fillText(v<0.01&&v>0?v.toExponential(1):v.toFixed(3),m.l-6,yy+4);}
+  c.textAlign='center';
+  for(let i=0;i<=6;i++){const idx=Math.round(i*(n-1)/6);c.fillText((o.x[idx]*(o.xs_||1)).toFixed(1),tx(idx),H-m.b+16);}
+  o.lines.forEach(l=>{if(!l.f)return;c.beginPath();c.moveTo(tx(0),ty(0));for(let i=0;i<n;i++)c.lineTo(tx(i),ty(l.d[i]));c.lineTo(tx(n-1),ty(0));c.closePath();c.fillStyle=l.f;c.fill();});
+  o.lines.forEach(l=>{c.beginPath();for(let i=0;i<n;i++)i?c.lineTo(tx(i),ty(l.d[i])):c.moveTo(tx(i),ty(l.d[i]));c.strokeStyle=l.c;c.lineWidth=1.8;c.stroke();});
+  c.font='11px sans-serif';c.textAlign='right';let lx=W-m.r;
+  for(let i=o.lines.length-1;i>=0;i--){const s=o.lines[i];if(!s.n)continue;const tw=c.measureText(s.n).width;c.fillStyle=s.c;c.fillRect(lx-tw-16,m.t+2,10,10);c.fillStyle='#374151';c.fillText(s.n,lx,m.t+11);lx-=tw+28;}
+  c.fillStyle='#6b7280';c.font='11px sans-serif';c.textAlign='center';c.fillText(o.xl||'',m.l+gw/2,H-6);
+  c.save();c.translate(12,m.t+gh/2);c.rotate(-PI/2);c.fillText(o.yl||'',0,0);c.restore();
+  return cv.toDataURL('image/png',1.0);
+}
+
+function rptPhase(trTh,trPh,W_,H_){
+  const W=W_||1200,H=H_||400;
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;
+  const c=cv.getContext('2d');
+  c.fillStyle='#fff';c.fillRect(0,0,W,H);
+  const hw=W/2;
+  c.strokeStyle='#e5e7eb';c.lineWidth=1;c.beginPath();c.moveTo(hw,0);c.lineTo(hw,H);c.stroke();
+  function one(tr,col,label,ox,w){
+    const mg_={l:52,r:12,t:20,b:34};const gw_=w-mg_.l-mg_.r,gh_=H-mg_.t-mg_.b;
+    let xn=1e9,xx=-1e9,yn=1e9,yx=-1e9;
+    tr.forEach(([x,y_])=>{xn=min(xn,x);xx=max(xx,x);yn=min(yn,y_);yx=max(yx,y_);});
+    const sp_=max(max(xx-xn,.2),max(yx-yn,.2))*.6;const xm=(xn+xx)/2,ym=(yn+yx)/2;
+    const tx_=v=>ox+mg_.l+gw_/2+(v-xm)/sp_*gw_*.44;
+    const ty_=v=>mg_.t+gh_/2-(v-ym)/sp_*gh_*.44;
+    c.strokeStyle='#e5e7eb';c.lineWidth=.5;
+    const y0_=ty_(0);if(y0_>mg_.t&&y0_<mg_.t+gh_){c.beginPath();c.moveTo(ox+mg_.l,y0_);c.lineTo(ox+mg_.l+gw_,y0_);c.stroke();}
+    const x0_=tx_(0);if(x0_>ox+mg_.l&&x0_<ox+mg_.l+gw_){c.beginPath();c.moveTo(x0_,mg_.t);c.lineTo(x0_,mg_.t+gh_);c.stroke();}
+    const n=tr.length;
+    for(let i=1;i<n;i++){c.beginPath();c.moveTo(tx_(tr[i-1][0]),ty_(tr[i-1][1]));c.lineTo(tx_(tr[i][0]),ty_(tr[i][1]));c.strokeStyle=col;c.globalAlpha=.1+.6*i/n;c.lineWidth=1.2;c.stroke();}
+    c.globalAlpha=1;
+    c.beginPath();c.arc(tx_(tr[0][0]),ty_(tr[0][1]),4,0,2*PI);c.fillStyle='#9ca3af';c.fill();
+    c.font='9px sans-serif';c.fillStyle='#9ca3af';c.textAlign='left';c.fillText('t = 0',tx_(tr[0][0])+6,ty_(tr[0][1])+3);
+    c.beginPath();c.arc(tx_(tr[n-1][0]),ty_(tr[n-1][1]),5,0,2*PI);c.fillStyle=col;c.fill();
+    c.fillStyle=col;c.fillText('fin',tx_(tr[n-1][0])+7,ty_(tr[n-1][1])+3);
+    c.font='bold 12px sans-serif';c.fillStyle=col;c.textAlign='left';c.fillText(label,ox+mg_.l,mg_.t+2);
+    c.font='10px sans-serif';c.fillStyle='#6b7280';c.textAlign='center';
+    c.fillText('position (rad)',ox+mg_.l+gw_/2,H-8);
+    c.save();c.translate(ox+8,mg_.t+gh_/2);c.rotate(-PI/2);c.fillText('vitesse (rad/\u03C4)',0,0);c.restore();
+  }
+  one(trTh,'#2563eb','m\u2081 (cercle)',0,hw);
+  one(trPh,'#d97706','m\u2082 (ellipse)',hw,hw);
+  return cv.toDataURL('image/png',1.0);
+}
+
+function downloadPDF(){
+  const btn=$('pdfBtn');
+  btn.classList.add('busy');btn.textContent='Simulation en cours...';
+  setTimeout(()=>{
+    try{generateReport();}catch(err){console.error(err);alert('Erreur: '+err.message);}
+    btn.classList.remove('busy');btn.textContent='Exporter PDF';
+  },60);
+}
+
+function generateReport(){
+  const p=phys();const ic=gIC();
+  const tauEnd=1200,nS=2000;
+  const R_=fullSim(p.mu,p.beta,ic,tauEnd,nS);
+  const n=R_.t.length;
+  const E0=R_.E[0],Ef=R_.E[n-1];
+  const pctL=E0>1e-8?((1-Ef/E0)*100):0;
+
+  let t50=-1,t90=-1,t99=-1;
+  for(let i=1;i<n;i++){const l=1-R_.E[i]/E0;if(t50<0&&l>.5)t50=R_.t[i];if(t90<0&&l>.9)t90=R_.t[i];if(t99<0&&l>.99)t99=R_.t[i];}
+  const f1=R_.K1[n-1]/max(Ef,1e-15),f2=R_.K2[n-1]/max(Ef,1e-15);
+
+  const stacked=R_.K1.map((v,i)=>v+R_.K2[i]+R_.P[i]);
+  const imgEnergy=rptChart({w:1200,h:380,xl:'temps (s)',yl:'\u00e9nergie (J)',x:R_.t,xs_:p.Tscale,ys:p.Escale,
+    lines:[{d:R_.P,c:'#0d9488',n:'P (ressort)',f:'rgba(13,148,136,.18)'},{d:R_.K2.map((v,i)=>v+R_.P[i]),c:'#d97706',n:'K\u2082 (m\u2082)',f:'rgba(217,119,6,.18)'},{d:stacked,c:'#2563eb',n:'K\u2081 (m\u2081)',f:'rgba(37,99,235,.14)'},{d:R_.E,c:'#111827',n:'E totale'}]});
+  const imgIndiv=rptChart({w:1200,h:320,xl:'temps (s)',yl:'\u00e9nergie (J)',x:R_.t,xs_:p.Tscale,ys:p.Escale,
+    lines:[{d:R_.K1,c:'#2563eb',n:'K\u2081'},{d:R_.K2,c:'#d97706',n:'K\u2082'},{d:R_.P,c:'#0d9488',n:'P'}]});
+  const imgSpring=rptChart({w:1200,h:300,xl:'temps (s)',yl:'l / R',x:R_.t,xs_:p.Tscale,ys:1,
+    lines:[{d:R_.lR,c:'#7c3aed',n:'l / R'}]});
+  const trT=[],trP=[];for(let i=0;i<n;i++){trT.push([R_.th[i],R_.thd[i]]);trP.push([R_.ph[i],R_.phd[i]]);}
+  const imgPhase=rptPhase(trT,trP,1200,400);
+
+  const fv=(v,d)=>v<0.01&&v>0?v.toExponential(1):v.toFixed(d||2);
+  const ts_=t=>fv(t*p.Tscale,3);
+  const eJ_=e=>fv(e*p.Escale,5);
+  const predText=$('predictBox').textContent;
+
+  const html=`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<title>Rapport de Simulation</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+@page{size:A4;margin:18mm 20mm 20mm 20mm}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Source Sans 3',sans-serif;font-size:10.5pt;color:#1f2937;line-height:1.55;background:#fff}
+.page{page-break-after:always;position:relative}
+.page:last-child{page-break-after:avoid}
+.cover{display:flex;flex-direction:column;justify-content:center;min-height:92vh;padding:60px 0}
+.cover-bar{width:60px;height:4px;background:linear-gradient(90deg,#2563eb,#0d9488);margin-bottom:24px}
+.cover h1{font-family:'Playfair Display',serif;font-size:30pt;font-weight:700;color:#111827;line-height:1.15;margin-bottom:10px}
+.cover h2{font-family:'Playfair Display',serif;font-size:13pt;font-weight:400;color:#6b7280;margin-bottom:36px}
+.cover-meta{font-size:9.5pt;color:#9ca3af;line-height:1.7}
+.cover-meta b{color:#6b7280}
+h3{font-family:'Playfair Display',serif;font-size:15pt;font-weight:600;color:#111827;margin:26px 0 12px;padding-bottom:5px;border-bottom:2px solid #e5e7eb}
+h4{font-size:10.5pt;font-weight:700;color:#374151;margin:16px 0 7px;text-transform:uppercase;letter-spacing:.7px}
+p{margin:6px 0}
+.exec{background:#f0f9ff;border-left:4px solid #2563eb;padding:14px 18px;margin:18px 0;border-radius:0 6px 6px 0}
+.exec-title{font-weight:700;color:#1e40af;font-size:11pt;margin-bottom:5px}
+.exec p{margin:3px 0;color:#1e3a5f}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.kpi{background:#fafafa;border:1px solid #e5e7eb;border-radius:6px;padding:12px 14px;text-align:center}
+.kpi-val{font-family:'JetBrains Mono',monospace;font-size:17pt;font-weight:600;display:block}
+.kpi-label{font-size:8pt;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+.kpi.blue .kpi-val{color:#2563eb}.kpi.amber .kpi-val{color:#d97706}.kpi.green .kpi-val{color:#0d9488}.kpi.red .kpi-val{color:#dc2626}
+table{width:100%;border-collapse:collapse;margin:8px 0;font-size:9.5pt}
+th{text-align:left;font-weight:600;color:#374151;padding:6px 8px;border-bottom:2px solid #d1d5db;font-size:8.5pt;text-transform:uppercase;letter-spacing:.4px}
+td{padding:5px 8px;border-bottom:1px solid #f3f4f6}
+tr:nth-child(even){background:#f9fafb}
+.mono{font-family:'JetBrains Mono',monospace;font-size:9pt}
+.r{text-align:right}
+.dim{color:#9ca3af}
+.chart{margin:14px 0;text-align:center}
+.chart img{width:100%;max-width:100%;border:1px solid #e5e7eb;border-radius:4px}
+.chart-cap{font-size:8.5pt;color:#9ca3af;font-style:italic;margin-top:3px}
+.note{font-size:8.5pt;color:#6b7280;font-style:italic;margin:6px 0}
+.footer{position:fixed;bottom:0;left:0;right:0;font-size:7pt;color:#d1d5db;text-align:center;padding:6px;border-top:1px solid #f3f4f6}
+</style></head><body>
+
+<div class="page cover">
+  <div class="cover-bar"></div>
+  <h1>Analyse dynamique d'un syst\u00e8me<br>\u00e0 deux masses coupl\u00e9es</h1>
+  <h2>Simulation num\u00e9rique compl\u00e8te \u2014 \u03C4 = 0 \u00e0 ${tauEnd}</h2>
+  <div class="cover-meta">
+    <b>Auteur :</b> Valentin Angenot<br>
+    <b>Date :</b> ${new Date().toLocaleDateString('fr-BE',{day:'numeric',month:'long',year:'numeric'})}<br>
+    <b>Dur\u00e9e physique simul\u00e9e :</b> ${fv(tauEnd*p.Tscale,2)} s (${fv(tauEnd*p.Tscale/60,2)} min)<br>
+    <b>M\u00e9thode num\u00e9rique :</b> Runge-Kutta d'ordre 4, \u0394\u03C4 = 0.01, ${nS} points d'\u00e9chantillonnage
+  </div>
+</div>
+
+<div class="page">
+  <h3>1. Configuration du syst\u00e8me</h3>
+  <h4>G\u00e9om\u00e9trie</h4>
+  <table>
+    <tr><th>Param\u00e8tre</th><th>Symbole</th><th class="r">Valeur</th><th>Unit\u00e9</th></tr>
+    <tr><td>Rayon du cercle</td><td class="mono">R</td><td class="r mono">${p.R.toFixed(4)}</td><td>m</td></tr>
+    <tr><td>Demi-grand axe de l'ellipse</td><td class="mono">a/2 = 3R/8</td><td class="r mono">${fv(p.a_semi,4)}</td><td>m</td></tr>
+    <tr><td>Demi-petit axe de l'ellipse</td><td class="mono">b/2 = R/8</td><td class="r mono">${fv(p.b_semi,4)}</td><td>m</td></tr>
+    <tr><td>Longueur naturelle du ressort</td><td class="mono">l\u2080 = R</td><td class="r mono">${p.R.toFixed(4)}</td><td>m</td></tr>
+  </table>
+  <h4>Propri\u00e9t\u00e9s physiques</h4>
+  <table>
+    <tr><th>Param\u00e8tre</th><th>Symbole</th><th class="r">Valeur</th><th>Unit\u00e9</th></tr>
+    <tr><td>Masse sur le cercle</td><td class="mono">m\u2081</td><td class="r mono">${p.m1.toFixed(3)}</td><td>kg</td></tr>
+    <tr><td>Masse sur l'ellipse</td><td class="mono">m\u2082 = \u03BC\u00B7m\u2081</td><td class="r mono">${p.m2.toFixed(3)}</td><td>kg</td></tr>
+    <tr><td>Rapport de masse</td><td class="mono">\u03BC</td><td class="r mono">${p.mu.toFixed(4)}</td><td>\u2014</td></tr>
+    <tr><td>Raideur du ressort</td><td class="mono">k</td><td class="r mono">${p.k.toFixed(2)}</td><td>N/m</td></tr>
+    <tr><td>Amortissement adimensionnel</td><td class="mono">\u03B2</td><td class="r mono">${p.beta.toFixed(4)}</td><td>\u2014</td></tr>
+    <tr><td>Coefficient de friction</td><td class="mono">\u03B1 = \u03B2\u221A(k\u00B7m\u2081)</td><td class="r mono">${fv(p.alpha,4)}</td><td>N\u00B7s/m</td></tr>
+    <tr><td>Pulsation naturelle</td><td class="mono">\u03C9\u2080 = \u221A(k/m\u2081)</td><td class="r mono">${p.omega0.toFixed(4)}</td><td>rad/s</td></tr>
+    <tr><td>P\u00e9riode caract\u00e9ristique</td><td class="mono">T\u2080 = 2\u03C0/\u03C9\u2080</td><td class="r mono">${fv(2*PI/p.omega0,4)}</td><td>s</td></tr>
+  </table>
+  <h4>Conditions initiales</h4>
+  <table>
+    <tr><th>Variable</th><th>Symbole</th><th class="r">Valeur</th><th>Unit\u00e9</th><th class="r">Grandeur physique</th></tr>
+    <tr><td>Position de m\u2081</td><td class="mono">\u03B8\u2080</td><td class="r mono">${ic[0].toFixed(4)}</td><td>rad</td><td class="r dim">\u2014</td></tr>
+    <tr><td>Position de m\u2082</td><td class="mono">\u03C6\u2080</td><td class="r mono">${ic[1].toFixed(4)}</td><td>rad</td><td class="r dim">\u2014</td></tr>
+    <tr><td>Vitesse angulaire de m\u2081</td><td class="mono">\u03B8'\u2080</td><td class="r mono">${ic[2].toFixed(4)}</td><td>rad/\u03C4</td><td class="r mono">${fv(abs(ic[2])*p.R*p.omega0,4)} m/s</td></tr>
+    <tr><td>Vitesse angulaire de m\u2082</td><td class="mono">\u03C6'\u2080</td><td class="r mono">${ic[3].toFixed(4)}</td><td>rad/\u03C4</td><td class="r dim">\u2014</td></tr>
+  </table>
+
+  <h3>2. Synth\u00e8se des r\u00e9sultats</h3>
+  <div class="exec">
+    <div class="exec-title">R\u00e9sum\u00e9 ex\u00e9cutif</div>
+    <p>${predText.replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>')}</p>
+  </div>
+  <div class="kpis">
+    <div class="kpi${pctL>90?' red':pctL>50?' amber':' green'}"><span class="kpi-val">${pctL.toFixed(1)}%</span><span class="kpi-label">\u00c9nergie dissip\u00e9e</span></div>
+    <div class="kpi blue"><span class="kpi-val">${eJ_(E0)} J</span><span class="kpi-label">\u00c9nergie initiale</span></div>
+    <div class="kpi${Ef<E0*0.01?' green':' amber'}"><span class="kpi-val">${eJ_(Ef)} J</span><span class="kpi-label">\u00c9nergie finale</span></div>
+  </div>
+  ${t50>0||t90>0||t99>0?`<h4>Jalons temporels de dissipation</h4><table>
+    <tr><th>Seuil</th><th class="r">\u03C4</th><th class="r">t (s)</th></tr>
+    ${t50>0?`<tr><td>50 %</td><td class="r mono">${t50.toFixed(1)}</td><td class="r mono">${ts_(t50)}</td></tr>`:''}
+    ${t90>0?`<tr><td>90 %</td><td class="r mono">${t90.toFixed(1)}</td><td class="r mono">${ts_(t90)}</td></tr>`:''}
+    ${t99>0?`<tr><td>99 %</td><td class="r mono">${t99.toFixed(1)}</td><td class="r mono">${ts_(t99)}</td></tr>`:''}
+  </table>`:''}
+  <h4>\u00c9tat final (\u03C4 = ${tauEnd})</h4>
+  <table>
+    <tr><th>Variable</th><th class="r">Valeur</th><th>Unit\u00e9</th><th class="r">Part de E</th></tr>
+    <tr><td>K\u2081 (cin\u00e9tique m\u2081)</td><td class="r mono">${eJ_(R_.K1[n-1])}</td><td>J</td><td class="r mono">${(f1*100).toFixed(1)}%</td></tr>
+    <tr><td>K\u2082 (cin\u00e9tique m\u2082)</td><td class="r mono">${eJ_(R_.K2[n-1])}</td><td>J</td><td class="r mono">${(f2*100).toFixed(1)}%</td></tr>
+    <tr><td>P (\u00e9lastique)</td><td class="r mono">${eJ_(R_.P[n-1])}</td><td>J</td><td class="r mono">${((1-f1-f2)*100).toFixed(1)}%</td></tr>
+    <tr><td><b>E totale</b></td><td class="r mono"><b>${eJ_(Ef)}</b></td><td>J</td><td class="r dim">100%</td></tr>
+    <tr><td>\u03B8' finale</td><td class="r mono">${R_.thd[n-1].toFixed(4)}</td><td>rad/\u03C4</td><td class="r mono dim">${fv(abs(R_.thd[n-1])*p.R*p.omega0,3)} m/s</td></tr>
+    <tr><td>\u03C6' finale</td><td class="r mono">${R_.phd[n-1].toFixed(4)}</td><td>rad/\u03C4</td><td class="r dim">\u2014</td></tr>
+    <tr><td>l / R</td><td class="r mono">${R_.lR[n-1].toFixed(5)}</td><td>\u2014</td><td class="r dim">${R_.lR[n-1]<.98?'comprim\u00e9':R_.lR[n-1]>1.02?'\u00e9tir\u00e9':'\u2248 repos'}</td></tr>
+  </table>
+</div>
+
+<div class="page">
+  <h3>3. \u00c9volution de l'\u00e9nergie</h3>
+  <p>Le graphique ci-dessous montre la r\u00e9partition de l'\u00e9nergie totale entre ses trois composantes :
+  l'\u00e9nergie cin\u00e9tique de m\u2081 (K\u2081, bleu), celle de m\u2082 (K\u2082, orange) et l'\u00e9nergie potentielle
+  \u00e9lastique du ressort (P, vert). La courbe noire repr\u00e9sente E = K\u2081 + K\u2082 + P.</p>
+  <div class="chart"><img src="${imgEnergy}"><div class="chart-cap">Figure 1 \u2014 R\u00e9partition \u00e9nerg\u00e9tique (aires empil\u00e9es) de \u03C4 = 0 \u00e0 ${tauEnd}</div></div>
+  <p>La vue d\u00e9compos\u00e9e permet de distinguer les oscillations propres \u00e0 chaque composante et les transferts d'\u00e9nergie via le ressort.</p>
+  <div class="chart"><img src="${imgIndiv}"><div class="chart-cap">Figure 2 \u2014 K\u2081, K\u2082 et P s\u00e9par\u00e9ment</div></div>
+</div>
+
+<div class="page">
+  <h3>4. Couplage et dynamique</h3>
+  <h4>Longueur du ressort</h4>
+  <p>L'\u00e9volution de l/R renseigne sur l'intensit\u00e9 du couplage. Quand l/R oscille fortement autour de 1, le ressort transf\u00e8re activement de l'\u00e9nergie. Quand il converge vers une constante, le couplage s'affaiblit.</p>
+  <div class="chart"><img src="${imgSpring}"><div class="chart-cap">Figure 3 \u2014 Longueur normalis\u00e9e du ressort (l\u2080/R = 1 = repos)</div></div>
+  <h4>Portraits de phase</h4>
+  <p>Le portrait de phase repr\u00e9sente les \u00e9tats (position, vitesse) visit\u00e9s par chaque masse.
+  Un cycle ferm\u00e9 traduit un mouvement p\u00e9riodique ; une trajectoire convergeant vers un point indique l'immobilisation de la masse.</p>
+  <div class="chart"><img src="${imgPhase}"><div class="chart-cap">Figure 4 \u2014 Portraits de phase de m\u2081 (gauche) et m\u2082 (droite)</div></div>
+  <p class="note">Points gris : \u00e9tat initial. Points color\u00e9s : \u00e9tat final. L'opacit\u00e9 cro\u00eet avec le temps.</p>
+</div>
+
+<div class="footer">Rapport g\u00e9n\u00e9r\u00e9 automatiquement \u2014 Simulateur de syst\u00e8me m\u00e9canique coupl\u00e9 \u2014 Valentin Angenot \u2014 ${new Date().toLocaleDateString('fr-BE')}</div>
+<script>window.onload=()=>{setTimeout(()=>window.print(),400);}<\/script>
+</body></html>`;
+
+  const w=window.open('','_blank');
+  if(!w){alert('Autorisez les pop-ups pour ce site, puis r\u00e9essayez.');return;}
+  w.document.write(html);
+  w.document.close();
+}
 /* ═══════════════ LABELS ═══════════════ */
 function labels(){
   const p=phys();
@@ -741,7 +930,6 @@ function labels(){
   $('vPhd0').textContent=(+$('sPhd0').value).toFixed(2)+' rad/τ';
   $('vSpeed').textContent=(+$('sSpeed').value).toFixed(1)+'×';
 
-  // derived quantities
   $('derivedBox').innerHTML=
     `m₂ = μ·m₁ = <span class="v">${p.m2.toFixed(2)}</span> <span class="u">kg</span>`+
     ` │ α = β√(km₁) = <span class="v">${fmt(p.alpha,3)}</span> <span class="u">N·s/m</span><br>`+
