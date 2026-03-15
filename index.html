@@ -277,19 +277,24 @@ function phys(){
 
 function fmt(v,d){return v<0.01&&v>0?v.toExponential(1):v.toFixed(d||2)}
 
+/* ── Smooth display: clamp to zero below 0.01% of E0 ── */
+function clampE(v){return E0_init>1e-12&&abs(v)<E0_init*1e-4?0:v;}
+function clampV(v,ref){return ref>1e-12&&abs(v)<ref*1e-4?0:v;}
+
 /* ═══════════════ STATE ═══════════════ */
 const DT=.005,SUB=8,MAXH=3000;
-let S,tau,run,H_,trTh,trPh;
+let S,tau,run,H_,trTh,trPh,E0_init;
 
 function gIC(){return[+$('sTh0').value,+$('sPh0').value,+$('sThd0').value,+$('sPhd0').value]}
-function init(){S=gIC();tau=0;H_={t:[],K1:[],K2:[],P:[],E:[],lR:[]};trTh=[];trPh=[]}
+function init(){S=gIC();tau=0;H_={t:[],K1:[],K2:[],P:[],E:[],lR:[]};trTh=[];trPh=[];const p=phys();E0_init=nrg(S,p.mu).E;}
 function step(){
   const p=phys();
   const spd=+$('sSpeed').value;
   const n=Math.round(SUB*spd);
   for(let i=0;i<n;i++){S=rk4(S,DT,p.mu,p.beta);tau+=DT}
   const e=nrg(S,p.mu);
-  H_.t.push(tau);H_.K1.push(e.K1);H_.K2.push(e.K2);H_.P.push(e.P);H_.E.push(e.E);H_.lR.push(e.lR);
+  const cK1=clampE(e.K1),cK2=clampE(e.K2),cP=clampE(e.P),cE=clampE(e.E);
+  H_.t.push(tau);H_.K1.push(cK1);H_.K2.push(cK2);H_.P.push(cP);H_.E.push(cE);H_.lR.push(e.lR);
   trTh.push([S[0],S[2]]);trPh.push([S[1],S[3]]);
   if(H_.t.length>MAXH){for(let k in H_)H_[k].shift();trTh.shift();trPh.shift()}
 }
@@ -383,11 +388,14 @@ function drawSys(){
 
   const e=nrg(S,p.mu);
   const t_s=tau*p.Tscale;
-  const E_J=e.E*p.Escale;
-  const K1J=e.K1*p.Escale, K2J=e.K2*p.Escale, PJ=e.P*p.Escale;
+  const cE=clampE(e.E), cK1=clampE(e.K1), cK2=clampE(e.K2), cP=clampE(e.P);
+  const E_J=cE*p.Escale, K1J=cK1*p.Escale, K2J=cK2*p.Escale, PJ=cP*p.Escale;
   const l_m=e.lR*p.R;
-  const v1=abs(S[2])*p.R*p.omega0;
-  const v2=abs(S[3])*p.R*p.omega0*sqrt(9*sin(S[1])**2+cos(S[1])**2)/8;
+  const v1raw=abs(S[2])*p.R*p.omega0;
+  const v2raw=abs(S[3])*p.R*p.omega0*sqrt(9*sin(S[1])**2+cos(S[1])**2)/8;
+  const vRef=max(v1raw,v2raw,1e-12);
+  const v1=clampV(v1raw,vRef);
+  const v2=clampV(v2raw,vRef);
 
   const fa=a=>{let v=a%(2*PI);if(v>PI)v-=2*PI;if(v<-PI)v+=2*PI;return v.toFixed(2)};
   $('hud').innerHTML=
@@ -502,14 +510,16 @@ function onePhase(c,tr,col,ox,w,title,xl,yl){
 /* ═══════════════ DRAW GAUGE ═══════════════ */
 function drawG(){
   const c=cx.cG,W=c._w,H=c._h;c.clearRect(0,0,W,H);
-  const p=phys();const e=nrg(S,p.mu);const E=max(e.E,1e-12);
+  const p=phys();const e=nrg(S,p.mu);
+  const cE=clampE(e.E),cK1=clampE(e.K1),cK2=clampE(e.K2),cP=clampE(e.P);
+  const E=max(cE,1e-12);
   const pd_={l:18,r:18};const bw=W-pd_.l-pd_.r,by=40,bh=22;
-  const wK1=(e.K1/E)*bw,wK2=(e.K2/E)*bw,wP=(e.P/E)*bw;
+  const wK1=(cK1/E)*bw,wK2=(cK2/E)*bw,wP=(cP/E)*bw;
   c.fillStyle='#4facfe';rr(c,pd_.l,by,wK1,bh,4,true,false);
   c.fillStyle='#f5a623';if(wK2>.5)c.fillRect(pd_.l+wK1,by,wK2,bh);
   c.fillStyle='#50e3c2';if(wP>.5)rr(c,pd_.l+wK1+wK2,by,wP,bh,4,false,true);
   c.font='600 9px "JetBrains Mono",monospace';c.textAlign='center';c.fillStyle='#0a0e17';
-  [{v:e.K1/E,x:pd_.l+wK1/2,l:'K₁'},{v:e.K2/E,x:pd_.l+wK1+wK2/2,l:'K₂'},{v:e.P/E,x:pd_.l+wK1+wK2+wP/2,l:'P'}]
+  [{v:cK1/E,x:pd_.l+wK1/2,l:'K₁'},{v:cK2/E,x:pd_.l+wK1+wK2/2,l:'K₂'},{v:cP/E,x:pd_.l+wK1+wK2+wP/2,l:'P'}]
     .forEach(q=>{if(q.v*bw>26)c.fillText(`${q.l} ${(q.v*100).toFixed(0)}%`,q.x,by+bh/2+3)});
 
   const gy=by+bh+28,gx=W/2,gr=min(50,W*.16);
@@ -530,11 +540,13 @@ function drawG(){
 
   const showH=$('helpBtn').classList.contains('on');
   const rowH=showH?28:18;const ty0=gy+80;
+  const dissipPct=E0_init>1e-12?((1-cE/E0_init)*100):0;
   const rows=[
-    ['E totale',fmt(e.E*p.Escale,4)+' J','#e8f0fa','K₁+K₂+P. Constante si β = 0.'],
-    ['K₁ (m₁)',fmt(e.K1*p.Escale,4)+' J','#4facfe','½ m₁ v₁². Énergie de m₁ sur le cercle.'],
-    ['K₂ (m₂)',fmt(e.K2*p.Escale,4)+' J','#f5a623','Énergie cinétique de m₂ sur l\'ellipse.'],
-    ['P (ressort)',fmt(e.P*p.Escale,4)+' J','#50e3c2','½ k (l−l₀)². Nul si l = l₀.'],
+    ['E totale',fmt(cE*p.Escale,4)+' J','#e8f0fa','K₁+K₂+P. Constante si β = 0.'],
+    ['K₁ (m₁)',fmt(cK1*p.Escale,4)+' J','#4facfe','½ m₁ v₁². Énergie de m₁ sur le cercle.'],
+    ['K₂ (m₂)',fmt(cK2*p.Escale,4)+' J','#f5a623','Énergie cinétique de m₂ sur l\'ellipse.'],
+    ['P (ressort)',fmt(cP*p.Escale,4)+' J','#50e3c2','½ k (l−l₀)². Nul si l = l₀.'],
+    ['Dissipé',min(dissipPct,100).toFixed(1)+' %',dissipPct>50?'#ff6b6b':dissipPct>10?'#f5a623':'#50e3c2','Fraction de l\'énergie initiale perdue par friction.'],
   ];
   rows.forEach(([lbl,val,col,desc],i)=>{
     const ry=ty0+i*rowH;
@@ -545,9 +557,10 @@ function drawG(){
   const dy=ty0+rows.length*rowH+10;
   const beta=p.beta;const php=S[3],sph=sin(S[1]),cph=cos(S[1]);
   const dE_adim=-beta/64*(9*sph*sph+cph*cph)*php*php;
-  const dE_J=dE_adim*p.Escale*p.omega0;
+  const dE_clamped=clampE(dE_adim);
+  const dE_J=dE_clamped*p.Escale*p.omega0;
   c.fillStyle='#5a6f8a';c.textAlign='left';c.font='10px "DM Sans",sans-serif';c.fillText('Dissipation :',pd_.l,dy);
-  c.fillStyle=beta===0?'#50e3c2':(dE_adim<-1e-6?'#ff6b6b':'#50e3c2');
+  c.fillStyle=beta===0?'#50e3c2':(dE_clamped<-1e-6?'#ff6b6b':'#50e3c2');
   c.textAlign='right';c.font='500 10px "JetBrains Mono",monospace';c.fillText(`${dE_J.toExponential(2)} W`,W-pd_.r,dy);
   if(showH){c.fillStyle='#2e3d56';c.textAlign='left';c.font='italic 9px "DM Sans",sans-serif';c.fillText(beta===0?'β=0 → conservatif, puissance dissipée nulle.':'dE/dt en watts. Toujours ≤ 0 (friction sur m₂).',pd_.l,dy+13)}
 }
@@ -580,7 +593,7 @@ function preset(i){
 
 /* ═══════════════ PRE-SIMULATION ANALYSIS ═══════════════ */
 function analyze(mu,beta,ic){
-  let y=[...ic];const dt=.02,steps=60000;
+  let y=[...ic];const dt=.02,steps=20000;
   const e0=nrg(y,mu);const E0=e0.E;
   const K1_0=e0.K1,K2_0=e0.K2,P0=e0.P;
   let tau90=-1,tau99=-1,tau50=-1;
@@ -748,7 +761,7 @@ function downloadPDF(){
 
 function generateReport(){
   const p=phys();const ic=gIC();
-  const tauEnd=1200,nS=2000;
+  const tauEnd=400,nS=2000;
   const R_=fullSim(p.mu,p.beta,ic,tauEnd,nS);
   const n=R_.t.length;
   const E0=R_.E[0],Ef=R_.E[n-1];
@@ -757,6 +770,44 @@ function generateReport(){
   let t50=-1,t90=-1,t99=-1;
   for(let i=1;i<n;i++){const l=1-R_.E[i]/E0;if(t50<0&&l>.5)t50=R_.t[i];if(t90<0&&l>.9)t90=R_.t[i];if(t99<0&&l>.99)t99=R_.t[i];}
   const f1=R_.K1[n-1]/max(Ef,1e-15),f2=R_.K2[n-1]/max(Ef,1e-15);
+
+  // ── Extrema: spring length, velocities ──
+  let lMin=1e9,lMax=-1e9,lMin_t=0,lMax_t=0;
+  let v1Max=0,v1Max_t=0,v2Max=0,v2Max_t=0;
+  let v1Min=1e9,v1Min_t=0,v2Min=1e9,v2Min_t=0;
+  let thdMax=-1e9,thdMin=1e9,phdMax=-1e9,phdMin=1e9;
+  let thdMax_t=0,thdMin_t=0,phdMax_t=0,phdMin_t=0;
+  for(let i=0;i<n;i++){
+    const lr_=R_.lR[i], t_=R_.t[i];
+    if(lr_<lMin){lMin=lr_;lMin_t=t_;}
+    if(lr_>lMax){lMax=lr_;lMax_t=t_;}
+    const av1=abs(R_.thd[i])*p.R*p.omega0;
+    const av2=abs(R_.phd[i])*p.R*p.omega0*sqrt(9*sin(R_.ph[i])**2+cos(R_.ph[i])**2)/8;
+    if(av1>v1Max){v1Max=av1;v1Max_t=t_;}
+    if(av2>v2Max){v2Max=av2;v2Max_t=t_;}
+    if(av1<v1Min){v1Min=av1;v1Min_t=t_;}
+    if(av2<v2Min){v2Min=av2;v2Min_t=t_;}
+    if(R_.thd[i]>thdMax){thdMax=R_.thd[i];thdMax_t=t_;}
+    if(R_.thd[i]<thdMin){thdMin=R_.thd[i];thdMin_t=t_;}
+    if(R_.phd[i]>phdMax){phdMax=R_.phd[i];phdMax_t=t_;}
+    if(R_.phd[i]<phdMin){phdMin=R_.phd[i];phdMin_t=t_;}
+  }
+
+  // ── Equilibrium detection: find points where both velocities ≈ 0 ──
+  // Also look for quasi-static states at the end
+  const eqPoints=[];
+  // Check if system reaches rest
+  const lastN=Math.round(n*0.05); // last 5%
+  let avgThd=0,avgPhd=0;
+  for(let i=n-lastN;i<n;i++){avgThd+=abs(R_.thd[i]);avgPhd+=abs(R_.phd[i]);}
+  avgThd/=lastN;avgPhd/=lastN;
+  const atRest=avgThd<0.02&&avgPhd<0.02;
+  const m1Trapped=avgThd>0.05&&avgPhd<0.02;
+  // Collect approximate equilibrium θ, φ at the end if at rest
+  let eqTh=R_.th[n-1]%(2*PI),eqPh=R_.ph[n-1]%(2*PI);
+  if(eqTh>PI)eqTh-=2*PI; if(eqTh<-PI)eqTh+=2*PI;
+  if(eqPh>PI)eqPh-=2*PI; if(eqPh<-PI)eqPh+=2*PI;
+  const eqLR=R_.lR[n-1];
 
   const stacked=R_.K1.map((v,i)=>v+R_.K2[i]+R_.P[i]);
   const imgEnergy=rptChart({w:1200,h:380,xl:'temps (s)',yl:'\u00e9nergie (J)',x:R_.t,xs_:p.Tscale,ys:p.Escale,
@@ -883,6 +934,39 @@ tr:nth-child(even){background:#f9fafb}
     <tr><td>\u03C6' finale</td><td class="r mono">${R_.phd[n-1].toFixed(4)}</td><td>rad/\u03C4</td><td class="r dim">\u2014</td></tr>
     <tr><td>l / R</td><td class="r mono">${R_.lR[n-1].toFixed(5)}</td><td>\u2014</td><td class="r dim">${R_.lR[n-1]<.98?'comprim\u00e9':R_.lR[n-1]>1.02?'\u00e9tir\u00e9':'\u2248 repos'}</td></tr>
   </table>
+
+  <h4>Extrema sur la dur\u00e9e simul\u00e9e</h4>
+  <table>
+    <tr><th>Grandeur</th><th class="r">Minimum</th><th class="r">\u00e0 t (s)</th><th class="r">Maximum</th><th class="r">\u00e0 t (s)</th></tr>
+    <tr><td>Longueur du ressort l</td><td class="r mono">${fv(lMin*p.R,4)} m&ensp;(l/R = ${lMin.toFixed(4)})</td><td class="r mono">${ts_(lMin_t)}</td><td class="r mono">${fv(lMax*p.R,4)} m&ensp;(l/R = ${lMax.toFixed(4)})</td><td class="r mono">${ts_(lMax_t)}</td></tr>
+    <tr><td>|v\u2081| (vitesse m\u2081)</td><td class="r mono">${fv(v1Min,4)} m/s</td><td class="r mono">${ts_(v1Min_t)}</td><td class="r mono">${fv(v1Max,4)} m/s</td><td class="r mono">${ts_(v1Max_t)}</td></tr>
+    <tr><td>|v\u2082| (vitesse m\u2082)</td><td class="r mono">${fv(v2Min,4)} m/s</td><td class="r mono">${ts_(v2Min_t)}</td><td class="r mono">${fv(v2Max,4)} m/s</td><td class="r mono">${ts_(v2Max_t)}</td></tr>
+    <tr><td>\u03B8' (vit. angulaire m\u2081)</td><td class="r mono">${thdMin.toFixed(4)} rad/\u03C4</td><td class="r mono">${ts_(thdMin_t)}</td><td class="r mono">${thdMax.toFixed(4)} rad/\u03C4</td><td class="r mono">${ts_(thdMax_t)}</td></tr>
+    <tr><td>\u03C6' (vit. angulaire m\u2082)</td><td class="r mono">${phdMin.toFixed(4)} rad/\u03C4</td><td class="r mono">${ts_(phdMin_t)}</td><td class="r mono">${phdMax.toFixed(4)} rad/\u03C4</td><td class="r mono">${ts_(phdMax_t)}</td></tr>
+    <tr><td>D\u00e9formation max du ressort</td><td colspan="2" class="r mono">\u0394l = ${fv((1-lMin)*p.R,4)} m (compression)</td><td colspan="2" class="r mono">\u0394l = ${fv((lMax-1)*p.R,4)} m (extension)</td></tr>
+  </table>
+
+  <h4>\u00c9quilibre et comportement asymptotique</h4>
+  ${atRest?`<p>Le syst\u00e8me converge vers un <b>\u00e9tat d'\u00e9quilibre au repos</b>. Les deux masses s'immobilisent aux positions :</p>
+  <table>
+    <tr><th>Variable</th><th class="r">Valeur \u00e0 l'\u00e9quilibre</th><th>Interpr\u00e9tation</th></tr>
+    <tr><td>\u03B8<sub>eq</sub></td><td class="r mono">${eqTh.toFixed(4)} rad</td><td>Position de m\u2081 sur le cercle</td></tr>
+    <tr><td>\u03C6<sub>eq</sub></td><td class="r mono">${eqPh.toFixed(4)} rad</td><td>Position de m\u2082 sur l'ellipse</td></tr>
+    <tr><td>l<sub>eq</sub> / R</td><td class="r mono">${eqLR.toFixed(5)}</td><td>${eqLR<.98?"Ressort comprim\u00e9 au repos":eqLR>1.02?"Ressort \u00e9tir\u00e9 au repos":"Ressort quasi-d\u00e9tendu"}</td></tr>
+    <tr><td>l<sub>eq</sub></td><td class="r mono">${fv(eqLR*p.R,5)} m</td><td>l\u2080 = ${p.R.toFixed(3)} m</td></tr>
+  </table>
+  <p class="note">L'\u00e9quilibre est atteint lorsque la force du ressort sur chaque masse est compens\u00e9e par la r\u00e9action des contraintes g\u00e9om\u00e9triques (cercle/ellipse). La position d'\u00e9quilibre d\u00e9pend des conditions initiales \u2014 le syst\u00e8me poss\u00e8de une infinit\u00e9 de configurations d'\u00e9quilibre.</p>`
+  :m1Trapped?`<p>Le syst\u00e8me <b>ne converge pas vers le repos</b>. La masse m\u2082 est immobilis\u00e9e par la friction (\u03C6' \u2248 0), mais m\u2081 conserve une rotation permanente \u00e0 \u03B8' \u2248 ${avgThd.toFixed(3)} rad/\u03C4 (|v\u2081| \u2248 ${fv(avgThd*p.R*p.omega0,3)} m/s).</p>
+  <table>
+    <tr><th>Variable</th><th class="r">Valeur asymptotique</th><th>Interpr\u00e9tation</th></tr>
+    <tr><td>\u03B8'</td><td class="r mono">${R_.thd[n-1].toFixed(4)} rad/\u03C4</td><td>Rotation permanente de m\u2081 (pas de friction)</td></tr>
+    <tr><td>\u03C6'</td><td class="r mono">\u2248 0</td><td>m\u2082 immobilis\u00e9e par friction</td></tr>
+    <tr><td>\u03C6<sub>eq</sub></td><td class="r mono">${eqPh.toFixed(4)} rad</td><td>Position finale de m\u2082</td></tr>
+    <tr><td>l<sub>eq</sub> / R</td><td class="r mono">${eqLR.toFixed(5)}</td><td>Varie p\u00e9riodiquement avec la rotation de m\u2081</td></tr>
+  </table>
+  <p class="note">L'\u00e9nergie cin\u00e9tique de m\u2081 (${eJ_(R_.K1[n-1])} J) est pi\u00e9g\u00e9e ind\u00e9finiment : la friction n'agit que sur m\u2082, et le couplage via le ressort est devenu inefficace dans cette configuration.</p>`
+  :`<p>Apr\u00e8s \u03C4 = ${tauEnd}, le syst\u00e8me est encore en mouvement (\u03B8' \u2248 ${avgThd.toFixed(3)}, \u03C6' \u2248 ${avgPhd.toFixed(3)} rad/\u03C4). L'\u00e9quilibre n'est pas encore atteint sur la dur\u00e9e simul\u00e9e.</p>
+  <p class="note">Augmenter la dur\u00e9e de simulation (\u03C4<sub>end</sub>) permettrait d'observer la convergence \u00e9ventuelle vers l'\u00e9quilibre.</p>`}
 </div>
 
 <div class="page">
