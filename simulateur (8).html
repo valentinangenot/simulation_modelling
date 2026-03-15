@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulateur – Deux masses couplées par un ressort</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0e17;--bg2:#0f1520;--bg3:#151d2e;
+  --border:#1e2a42;--border-hi:#2a3a5c;
+  --text:#c8d6e5;--dim:#5a6f8a;--bright:#e8f0fa;
+  --accent:#4facfe;
+  --K1:#4facfe;--K2:#f5a623;--P:#50e3c2;--E:#e8f0fa;
+  --danger:#ff6b6b;--track:#1a2540;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif}
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+.header{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.header h1{font:500 13px/1 'JetBrains Mono',monospace;color:var(--bright)}
+.help-toggle{font:500 11px/1 'JetBrains Mono',monospace;padding:5px 10px;border-radius:4px;cursor:pointer;background:var(--border);color:var(--dim);border:1px solid var(--border-hi);transition:all .15s}
+.help-toggle:hover,.help-toggle.on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+
+.intro{flex:0 0 auto;display:none;padding:14px 20px;background:var(--bg2);border-bottom:1px solid var(--border);gap:16px;align-items:stretch;overflow:hidden}
+.intro.show{display:flex}
+.intro-text{flex:1;font-size:12.5px;line-height:1.65;color:var(--text)}
+.intro-text b{color:var(--bright)}
+.intro-text .m1{color:var(--K1);font-weight:600}
+.intro-text .m2{color:var(--K2);font-weight:600}
+.intro-text .sp{color:var(--P);font-weight:600}
+.intro-diagram{width:220px;min-width:220px}
+.intro-diagram canvas{width:100%;height:100%;display:block}
+
+.body{flex:1 1 0;display:flex;min-height:0;overflow:hidden}
+.sidebar{flex:0 0 310px;width:310px;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;overflow-x:hidden}
+.sidebar::-webkit-scrollbar{width:4px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:2px}
+
+.panel{padding:12px 16px;border-bottom:1px solid var(--border)}
+.ptitle{font:600 9px/1 'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:1.4px;color:var(--dim);margin-bottom:10px}
+
+.prow{margin-bottom:11px}
+.prow-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1px}
+.prow-name{font-size:12px;font-weight:600;color:var(--bright)}
+.prow-val{font:500 11px/1 'JetBrains Mono',monospace;color:var(--accent)}
+.prow-desc{font:italic 10.5px/1.4 'DM Sans',sans-serif;color:var(--dim);margin-bottom:4px}
+.prow-desc.hidden{display:none}
+.prow-derived{font:10px/1.4 'JetBrains Mono',monospace;color:#3a5a5a;margin-top:2px}
+
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:var(--track);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);box-shadow:0 0 5px rgba(79,172,254,.35)}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
+
+.btns{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.btn{flex:1;min-width:0;padding:7px 4px;border:1px solid var(--border-hi);background:var(--bg3);color:var(--text);font:500 10px/1 'JetBrains Mono',monospace;border-radius:4px;cursor:pointer;transition:all .15s;text-align:center}
+.btn:hover{background:var(--border-hi);color:var(--bright)}
+.btn.on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+
+.speed-row{display:flex;align-items:center;gap:6px;margin-top:4px;font:11px/1 'JetBrains Mono',monospace;color:var(--dim)}
+.speed-row input{flex:1}
+.speed-row .v{color:var(--accent);min-width:30px;text-align:right}
+
+.predict-box{font:11.5px/1.6 'DM Sans',sans-serif;color:var(--text);margin-top:8px;white-space:pre-line;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:10px 12px;max-height:300px;overflow-y:auto}
+.predict-box::-webkit-scrollbar{width:4px}
+.predict-box::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:2px}
+
+.derived-box{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-top:6px;font:10px/1.55 'JetBrains Mono',monospace;color:var(--dim)}
+.derived-box .v{color:var(--bright)}
+.derived-box .u{color:var(--accent)}
+
+.main{flex:1 1 0;min-width:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;background:var(--border)}
+.cell{position:relative;background:var(--bg);overflow:hidden}
+.cell canvas{position:absolute;top:0;left:0;width:100%;height:100%;display:block}
+.cell-lbl{position:absolute;top:7px;left:10px;z-index:2;pointer-events:none;font:600 9px/1 'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:1.1px;color:var(--dim)}
+.cell-sub{position:absolute;top:20px;left:10px;z-index:2;pointer-events:none;font:10px/1.35 'DM Sans',sans-serif;color:#3a506a;max-width:55%}
+.cell-sub.hidden{display:none}
+.hud{position:absolute;bottom:6px;left:10px;z-index:2;pointer-events:none;font:10px/1.55 'JetBrains Mono',monospace;color:var(--dim)}
+.hud .v{color:var(--bright)}.hud .c1{color:var(--K1)}.hud .c2{color:var(--K2)}.hud .cp{color:var(--P)}
+.legend{position:absolute;top:6px;right:10px;z-index:2;pointer-events:none;display:flex;gap:8px;font:9px/1 'JetBrains Mono',monospace}
+.legend i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:2px;vertical-align:middle}
+
+@media(max-width:900px){
+  .body{flex-direction:column}
+  .sidebar{flex:0 0 auto;width:100%;max-height:260px;border-right:none;border-bottom:1px solid var(--border)}
+  .main{min-height:400px}
+  .intro{flex-direction:column}
+  .intro-diagram{width:100%;min-width:0;height:100px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="header">
+  <h1>⚙ Simulateur — Deux masses couplées par un ressort</h1>
+  <button class="help-toggle on" id="helpBtn" onclick="toggleHelp()">? Explications</button>
+</div>
+
+<div class="intro show" id="intro">
+  <div class="intro-text">
+    <b>Le système :</b> Deux masses ponctuelles dans un plan <b>sans gravité</b>.
+    <span class="m1">m₁</span> (bleue) glisse <b>sans friction</b> sur un <b>cercle</b> de rayon R.
+    <span class="m2">m₂</span> (orange) glisse sur une <b>ellipse</b> (demi-axes 3R/8 et R/8) avec
+    <b>friction visqueuse</b>.
+    Un <span class="sp">ressort</span> (vert) de longueur naturelle l₀ = R et de raideur k les relie.
+    <br><br>
+    Positions repérées par <b>θ</b> (m₁, cercle) et <b>φ</b> (m₂, ellipse) :
+    0 = droite, π/2 = haut, π = gauche.
+    La simulation tourne en variables <b>adimensionnées</b> (τ, Ê), mais les grandeurs physiques (mètres, secondes, joules) sont affichées partout.
+  </div>
+  <div class="intro-diagram"><canvas id="cDia"></canvas></div>
+</div>
+
+<div class="body">
+<div class="sidebar">
+
+  <div class="panel">
+    <div class="ptitle">Contrôles</div>
+    <div class="btns">
+      <button class="btn on" id="btnPlay" onclick="togglePlay()">⏸ Pause</button>
+      <button class="btn" onclick="resetSim()">↺ Reset</button>
+    </div>
+    <div class="speed-row">
+      <span>Vitesse</span>
+      <input type="range" id="sSpeed" min="0.1" max="15" step="0.1" value="1">
+      <span class="v" id="vSpeed">1.0×</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ptitle">Géométrie et propriétés physiques</div>
+
+    <div class="prow">
+      <div class="prow-head"><span class="prow-name">R — rayon du cercle</span><span class="prow-val" id="vR">1.00 m</span></div>
+      <div class="prow-desc" id="dR">Rayon de la trajectoire circulaire de m₁. L'ellipse (3R/8 × R/8) et la longueur naturelle du ressort (l₀ = R) s'adaptent.</div>
+      <input type="range" id="sR" min="0.1" max="5" step="0.05" value="1">
+    </div>
+
+    <div class="prow">
+      <div class="prow-head"><span class="prow-name">m₁ — masse sur le cercle</span><span class="prow-val" id="vM1">1.00 kg</span></div>
+      <div class="prow-desc" id="dM1">Masse de la particule bleue. Pas de friction sur m₁.</div>
+      <input type="range" id="sM1" min="0.1" max="20" step="0.1" value="1">
+    </div>
+
+    <div class="prow">
+      <div class="prow-head"><span class="prow-name">k — raideur du ressort</span><span class="prow-val" id="vK">10.0 N/m</span></div>
+      <div class="prow-desc" id="dK">Raideur du ressort linéaire. Plus k est grand, plus les oscillations sont rapides.</div>
+      <input type="range" id="sK" min="0.5" max="100" step="0.5" value="10">
+    </div>
+
+    <div class="prow">
+      <div class="prow-head"><span class="prow-name">μ = m₂ / m₁</span><span class="prow-val" id="vMu">1.00</span></div>
+      <div class="prow-desc" id="dMu">Rapport de masse. Petit → m₂ légère. Grand → m₂ lourde.</div>
+      <input type="range" id="sMu" min="0.05" max="10" step="0.05" value="1">
+    </div>
+
+    <div class="prow">
+      <div class="prow-head"><span class="prow-name">β — amortissement adim.</span><span class="prow-val" id="vBeta">0.50</span></div>
+      <div class="prow-desc" id="dBeta">β = α / √(k·m₁). 0 = pas de friction, énergie conservée.</div>
+      <input type="range" id="sBeta" min="0" max="20" step="0.05" value="0.5">
+    </div>
+
+    <div class="derived-box" id="derivedBox">
+      <span class="v">Grandeurs dérivées :</span><br>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ptitle">Conditions initiales (à t = 0)</div>
+    <div class="prow">
+      <div class="prow-head"><span class="prow-name">θ₀ — angle de m₁</span><span class="prow-val" id="vTh0">0.79 rad</span></div>
+      <div class="prow-desc" id="dTh0">Position de m₁ sur le cercle. 0 = droite, π/2 = haut.</div>
+      <input type="range" id="sTh0" min="-3.14" max="3.14" step="0.01" value="0.785">
+    </div>
+    <div class="prow">
+      <div class="prow-head"><span class="prow-name">φ₀ — angle de m₂</span><span class="prow-val" id="vPh0">0.00 rad</span></div>
+      <div class="prow-desc" id="dPh0">Position de m₂ sur l'ellipse. 0 = extrémité droite.</div>
+      <input type="range" id="sPh0" min="-3.14" max="3.14" step="0.01" value="0">
+    </div>
+    <div class="prow">
+      <div class="prow-head"><span class="prow-name">θ'₀ — vitesse angulaire m₁</span><span class="prow-val" id="vThd0">0.00 rad/τ</span></div>
+      <div class="prow-desc" id="dThd0">Élan initial de m₁. Positif = anti-horaire.</div>
+      <input type="range" id="sThd0" min="-4" max="4" step="0.05" value="0">
+    </div>
+    <div class="prow">
+      <div class="prow-head"><span class="prow-name">φ'₀ — vitesse angulaire m₂</span><span class="prow-val" id="vPhd0">2.00 rad/τ</span></div>
+      <div class="prow-desc" id="dPhd0">Élan initial de m₂. Positif = anti-horaire.</div>
+      <input type="range" id="sPhd0" min="-4" max="4" step="0.05" value="2">
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ptitle">Scénarios prédéfinis</div>
+    <div class="btns">
+      <button class="btn" onclick="preset(0)">Conservatif</button>
+      <button class="btn" onclick="preset(1)">Amorti doux</button>
+    </div>
+    <div class="btns">
+      <button class="btn" onclick="preset(2)">m₂ lourde</button>
+      <button class="btn" onclick="preset(3)">Forte friction</button>
+    </div>
+    <div class="btns">
+      <button class="btn" onclick="preset(4)">m₁ lancée seule</button>
+      <button class="btn" onclick="preset(5)">Haute énergie</button>
+    </div>
+    <div class="ptitle" style="margin-top:12px">🔮 Prédiction (pré-simulation)</div>
+    <div class="predict-box" id="predictBox">Analyse en cours…</div>
+  </div>
+
+</div>
+
+<div class="main">
+  <div class="cell" id="cellSys">
+    <div class="cell-lbl">Système physique</div>
+    <div class="cell-sub" id="hSys">Les dimensions s'adaptent à R. Le cercle et l'ellipse sont à l'échelle.</div>
+    <div class="hud" id="hud"></div>
+    <canvas id="cSys"></canvas>
+  </div>
+  <div class="cell" id="cellE">
+    <div class="cell-lbl">Énergie vs temps</div>
+    <div class="cell-sub" id="hE">Aire empilée : K₁+K₂+P. Si β = 0, Ê reste constante.</div>
+    <div class="legend">
+      <span><i style="background:var(--K1)"></i><span style="color:var(--K1)">K₁</span></span>
+      <span><i style="background:var(--K2)"></i><span style="color:var(--K2)">K₂</span></span>
+      <span><i style="background:var(--P)"></i><span style="color:var(--P)">P</span></span>
+      <span><i style="background:var(--E)"></i><span style="color:var(--E)">Ê</span></span>
+    </div>
+    <canvas id="cE"></canvas>
+  </div>
+  <div class="cell" id="cellPh">
+    <div class="cell-lbl">Portraits de phase</div>
+    <div class="cell-sub" id="hPh">Chaque point = (position, vitesse) d'une masse à un instant. La trace montre l'historique. Si la trace se referme → mouvement périodique. Si elle converge vers un point → la masse s'arrête.</div>
+    <canvas id="cPh"></canvas>
+  </div>
+  <div class="cell" id="cellG">
+    <div class="cell-lbl">Bilan instantané</div>
+    <div class="cell-sub" id="hG">Répartition %, état du ressort et dissipation.</div>
+    <canvas id="cG"></canvas>
+  </div>
+</div>
+</div>
+</div>
+
+<script>
+const sin=Math.sin,cos=Math.cos,sqrt=Math.sqrt,PI=Math.PI,max=Math.max,min=Math.min,abs=Math.abs;
+const $=id=>document.getElementById(id);
+
+/* ═══════════════ PHYSICS (dimensionless) ═══════════════ */
+function lR(t,p){return sqrt(1-.75*cos(t)*cos(p)-.25*sin(t)*sin(p)+(9*cos(p)**2+sin(p)**2)/64)}
+function nrg(y,mu){const[t,p,td,pd]=y;const K1=.5*td*td;const g=(9*sin(p)**2+cos(p)**2)/128;const K2=mu*g*pd*pd;const lr=lR(t,p);const P=.5*(lr-1)**2;return{K1,K2,P,E:K1+K2+P,lR:lr}}
+function deriv(y,mu,b){const[t,p,td,pd]=y;const st=sin(t),ct=cos(t),sp=sin(p),cp=cos(p);const lr=lR(t,p),ratio=1-1/lr;const tdd=-ratio*(3*st*cp-ct*sp)/8;const g64=(9*sp*sp+cp*cp)/64;const num=-(mu/8)*sp*cp*pd*pd-ratio*(3*sp*ct-cp*st-sp*cp)/8-b*g64*pd;return[td,pd,tdd,num/(mu*g64)]}
+function rk4(y,dt,mu,b){const k1=deriv(y,mu,b);const y2=y.map((v,i)=>v+.5*dt*k1[i]);const k2=deriv(y2,mu,b);const y3=y.map((v,i)=>v+.5*dt*k2[i]);const k3=deriv(y3,mu,b);const y4=y.map((v,i)=>v+dt*k3[i]);const k4=deriv(y4,mu,b);return y.map((v,i)=>v+(dt/6)*(k1[i]+2*k2[i]+2*k3[i]+k4[i]))}
+
+/* ═══════════════ DIMENSIONAL CONVERSION ═══════════════ */
+function phys(){
+  const R=+$('sR').value, m1=+$('sM1').value, k=+$('sK').value;
+  const mu=+$('sMu').value, beta=+$('sBeta').value;
+  const m2=mu*m1;
+  const omega0=sqrt(k/m1);
+  const alpha=beta*sqrt(k*m1);
+  const l0=R;
+  const a_semi=3*R/8, b_semi=R/8;
+  const Escale=k*R*R; // 1 unit of Ê = k R² joules
+  const Tscale=1/omega0; // 1 unit of τ = 1/ω₀ seconds
+  const Vscale=R*omega0; // velocity scale m/s
+  return{R,m1,m2,k,mu,beta,alpha,omega0,l0,a_semi,b_semi,Escale,Tscale,Vscale};
+}
+
+function fmt(v,d){return v<0.01&&v>0?v.toExponential(1):v.toFixed(d||2)}
+
+/* ═══════════════ STATE ═══════════════ */
+const DT=.005,SUB=8,MAXH=3000;
+let S,tau,run,H_,trTh,trPh;
+
+function gIC(){return[+$('sTh0').value,+$('sPh0').value,+$('sThd0').value,+$('sPhd0').value]}
+function init(){S=gIC();tau=0;H_={t:[],K1:[],K2:[],P:[],E:[],lR:[]};trTh=[];trPh=[]}
+function step(){
+  const p=phys();
+  const spd=+$('sSpeed').value;
+  const n=Math.round(SUB*spd);
+  for(let i=0;i<n;i++){S=rk4(S,DT,p.mu,p.beta);tau+=DT}
+  const e=nrg(S,p.mu);
+  H_.t.push(tau);H_.K1.push(e.K1);H_.K2.push(e.K2);H_.P.push(e.P);H_.E.push(e.E);H_.lR.push(e.lR);
+  trTh.push([S[0],S[2]]);trPh.push([S[1],S[3]]);
+  if(H_.t.length>MAXH){for(let k in H_)H_[k].shift();trTh.shift();trPh.shift()}
+}
+
+/* ═══════════════ CANVASES ═══════════════ */
+const cs={},cx={};
+const IDS=['cSys','cE','cPh','cG','cDia'];
+function resize(){
+  IDS.forEach(id=>{const c=$(id);if(!c)return;cs[id]=c;const par=c.parentElement;const w=par.clientWidth,h=par.clientHeight;const d=devicePixelRatio||1;c.width=w*d;c.height=h*d;c.style.width=w+'px';c.style.height=h+'px';const ctx=c.getContext('2d');ctx.setTransform(d,0,0,d,0,0);ctx._w=w;ctx._h=h;cx[id]=ctx});
+  drawDia();
+}
+
+/* ═══════════════ DIAGRAM ═══════════════ */
+function drawDia(){
+  const c=cx.cDia;if(!c)return;
+  const W=c._w,H=c._h;c.clearRect(0,0,W,H);
+  const p=phys();
+  const mx=W*.5,my=H*.52,sc=min(W,H)*.34;
+
+  c.setLineDash([4,3]);
+  c.beginPath();c.arc(mx,my,sc,0,2*PI);c.strokeStyle='#2a3a5c';c.lineWidth=1.2;c.stroke();
+
+  // ellipse with correct proportions
+  const eRatioX=3/8, eRatioY=1/8;
+  c.beginPath();
+  for(let i=0;i<=100;i++){const a=i/100*2*PI;i?c.lineTo(mx+eRatioX*sc*cos(a),my-eRatioY*sc*sin(a)):c.moveTo(mx+eRatioX*sc*cos(a),my-eRatioY*sc*sin(a))}
+  c.closePath();c.strokeStyle='#3a2a00';c.stroke();c.setLineDash([]);
+
+  // ref axis
+  c.beginPath();c.moveTo(mx,my);c.lineTo(mx+sc*.35,my);c.strokeStyle='#2a3a5c';c.lineWidth=.8;c.stroke();
+
+  const th=.7,ph=.4;
+  c.beginPath();c.arc(mx,my,sc*.28,0,-th,true);c.strokeStyle='#4facfe60';c.lineWidth=1.5;c.stroke();
+  c.beginPath();c.arc(mx,my,sc*.17,0,-ph,true);c.strokeStyle='#f5a62360';c.lineWidth=1.5;c.stroke();
+
+  const x1=mx+sc*cos(th),y1=my-sc*sin(th);
+  const x2=mx+eRatioX*sc*cos(ph),y2=my-eRatioY*sc*sin(ph);
+
+  c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.strokeStyle='#50e3c2';c.lineWidth=1.5;c.setLineDash([2,2]);c.stroke();c.setLineDash([]);
+
+  c.beginPath();c.arc(x1,y1,5,0,2*PI);c.fillStyle='#4facfe';c.fill();
+  c.beginPath();c.arc(x2,y2,5,0,2*PI);c.fillStyle='#f5a623';c.fill();
+  c.beginPath();c.arc(mx,my,2,0,2*PI);c.fillStyle='#5a6f8a';c.fill();
+
+  c.font='600 10px "JetBrains Mono",monospace';
+  c.fillStyle='#4facfe';c.fillText('m₁',x1+7,y1-7);
+  c.fillStyle='#f5a623';c.fillText('m₂',x2+7,y2-9);
+  c.fillStyle='#5a6f8a';c.fillText('O',mx-12,my+3);
+
+  c.font='italic 10px "DM Sans",sans-serif';
+  c.fillStyle='#4facfe80';c.fillText('θ',mx+sc*.31,my-8);
+  c.fillStyle='#f5a62380';c.fillText('φ',mx+sc*.19,my-2);
+  c.fillStyle='#50e3c2';c.font='9px "DM Sans",sans-serif';
+  c.fillText('k = '+p.k+' N/m',(x1+x2)/2-24,(y1+y2)/2-7);
+
+  // dimension labels
+  c.fillStyle='#2a3a5c';c.font='9px "JetBrains Mono",monospace';
+  c.fillText('R = '+p.R.toFixed(2)+' m',mx+sc*0.5,my+sc*0.25);
+  c.fillText(fmt(p.a_semi,2)+'m × '+fmt(p.b_semi,2)+'m',mx-sc*0.15,my+eRatioY*sc+12);
+}
+
+/* ═══════════════ DRAW SYSTEM ═══════════════ */
+function drawSys(){
+  const c=cx.cSys,W=c._w,H=c._h;c.clearRect(0,0,W,H);
+  const p=phys();
+  const mx=W/2,my=H/2,sc=min(W,H)*.34;
+  const eRx=3/8,eRy=1/8;
+
+  // circle track
+  c.beginPath();c.arc(mx,my,sc,0,2*PI);c.strokeStyle='#1a2540';c.lineWidth=1.5;c.stroke();
+  // ellipse track
+  c.beginPath();
+  for(let i=0;i<=200;i++){const a=i/200*2*PI;i?c.lineTo(mx+eRx*sc*cos(a),my-eRy*sc*sin(a)):c.moveTo(mx+eRx*sc*cos(a),my-eRy*sc*sin(a))}
+  c.closePath();c.strokeStyle='#2a1f00';c.lineWidth=1.5;c.stroke();
+
+  // dimension annotations
+  c.font='8px "JetBrains Mono",monospace';c.fillStyle='#1e3050';c.textAlign='center';
+  c.fillText(p.R.toFixed(2)+' m',mx+sc+18,my);
+  c.fillText(fmt(p.a_semi,2)+' m',mx,my-eRy*sc-6);
+
+  const[th,ph]=S;
+  const x1=mx+sc*cos(th),y1=my-sc*sin(th);
+  const x2=mx+eRx*sc*cos(ph),y2=my-eRy*sc*sin(ph);
+
+  drawSpring(c,x1,y1,x2,y2);
+
+  // m1
+  c.beginPath();c.arc(x1,y1,7,0,2*PI);c.fillStyle='#4facfe';c.fill();c.strokeStyle='#2980d4';c.lineWidth=1.5;c.stroke();
+  const g1=c.createRadialGradient(x1,y1,0,x1,y1,15);g1.addColorStop(0,'rgba(79,172,254,.25)');g1.addColorStop(1,'rgba(79,172,254,0)');c.fillStyle=g1;c.beginPath();c.arc(x1,y1,15,0,2*PI);c.fill();
+  // m2
+  c.beginPath();c.arc(x2,y2,7,0,2*PI);c.fillStyle='#f5a623';c.fill();c.strokeStyle='#c47d10';c.lineWidth=1.5;c.stroke();
+  const g2=c.createRadialGradient(x2,y2,0,x2,y2,15);g2.addColorStop(0,'rgba(245,166,35,.25)');g2.addColorStop(1,'rgba(245,166,35,0)');c.fillStyle=g2;c.beginPath();c.arc(x2,y2,15,0,2*PI);c.fill();
+
+  c.font='600 10px "JetBrains Mono",monospace';c.textAlign='left';
+  c.fillStyle='#4facfe';c.fillText('m₁',x1+10,y1-7);
+  c.fillStyle='#f5a623';c.fillText('m₂',x2+10,y2-7);
+  c.beginPath();c.arc(mx,my,2,0,2*PI);c.fillStyle='#5a6f8a';c.fill();
+
+  // HUD with physical units
+  const e=nrg(S,p.mu);
+  const t_s=tau*p.Tscale;
+  const E_J=e.E*p.Escale;
+  const K1J=e.K1*p.Escale, K2J=e.K2*p.Escale, PJ=e.P*p.Escale;
+  const l_m=e.lR*p.R;
+  // |v₁| = |θ'| · ω₀ · R
+  const v1=abs(S[2])*p.R*p.omega0;
+  // |v₂| = |φ'| · ω₀ · R · √(9sin²φ + cos²φ) / 8
+  const v2=abs(S[3])*p.R*p.omega0*sqrt(9*sin(S[1])**2+cos(S[1])**2)/8;
+
+  const fa=a=>{let v=a%(2*PI);if(v>PI)v-=2*PI;if(v<-PI)v+=2*PI;return v.toFixed(2)};
+  $('hud').innerHTML=
+    `t = <span class="v">${fmt(t_s,2)} s</span> (τ = ${tau.toFixed(1)})`+
+    ` │ l = <span class="v">${fmt(l_m,3)} m</span> `+(e.lR<.98?'(comprimé)':e.lR>1.02?'(étiré)':'(≈ repos)')+
+    `<br><span class="c1">m₁</span> θ = ${fa(S[0])} rad  |v₁| = <span class="v">${fmt(v1,3)}</span> m/s`+
+    ` │ <span class="c2">m₂</span> φ = ${fa(S[1])} rad  |v₂| = <span class="v">${fmt(v2,3)}</span> m/s`+
+    `<br><span class="c1">K₁=${fmt(K1J,4)} J</span>`+
+    ` <span class="c2">K₂=${fmt(K2J,4)} J</span>`+
+    ` <span class="cp">P=${fmt(PJ,4)} J</span>`+
+    ` │ E = <span class="v">${fmt(E_J,4)} J</span>`;
+}
+
+function drawSpring(c,x1,y1,x2,y2){
+  const dx=x2-x1,dy=y2-y1,d=sqrt(dx*dx+dy*dy);if(d<1)return;
+  const nx=dx/d,ny=dy/d,px=-ny,py=nx;const coils=14,amp=min(6,120/d);
+  c.beginPath();c.moveTo(x1,y1);
+  for(let i=0;i<=coils*2;i++){const t=(i+1)/(coils*2+2);const s=(i%2?-1:1)*amp;c.lineTo(x1+dx*t+px*s,y1+dy*t+py*s)}
+  c.lineTo(x2,y2);c.strokeStyle='#50e3c2';c.lineWidth=1.5;c.globalAlpha=.75;c.stroke();c.globalAlpha=1;
+}
+
+/* ═══════════════ DRAW ENERGY ═══════════════ */
+function drawE(){
+  const c=cx.cE,W=c._w,H=c._h;c.clearRect(0,0,W,H);
+  const h=H_;if(h.t.length<2)return;
+  const p=phys();
+
+  const P_={l:55,r:12,t:36,b:32};
+  const gw=W-P_.l-P_.r,gh=H-P_.t-P_.b;
+  const t0=h.t[0],t1=h.t[h.t.length-1],ts=max(t1-t0,1);
+  let eM=0;for(let i=0;i<h.E.length;i++)eM=max(eM,h.E[i]);eM=max(eM*1.15,.001);
+  const eM_J=eM*p.Escale;
+
+  const tx=t=>P_.l+(t-t0)/ts*gw;
+  const ty=v=>P_.t+gh-v/eM*gh;
+  const n=h.t.length;
+
+  c.strokeStyle='#151d2e';c.lineWidth=.5;
+  c.font='9px "JetBrains Mono",monospace';c.fillStyle='#3a4f6a';
+  c.textAlign='right';
+  for(let i=0;i<=4;i++){
+    const yy=P_.t+i*gh/4;
+    c.beginPath();c.moveTo(P_.l,yy);c.lineTo(P_.l+gw,yy);c.stroke();
+    const val_J=(eM*(4-i)/4)*p.Escale;
+    c.fillText(fmt(val_J,3)+' J',P_.l-4,yy+3);
+  }
+  c.textAlign='center';
+  for(let i=0;i<=4;i++){
+    const tauV=t0+i*ts/4;
+    const tV=tauV*p.Tscale;
+    c.fillText(fmt(tV,1)+'s',tx(tauV),H-P_.b+13);
+  }
+  c.fillText('temps (s)',P_.l+gw/2,H-4);
+  c.save();c.translate(8,P_.t+gh/2);c.rotate(-PI/2);c.fillText('énergie (J)',0,0);c.restore();
+
+  function fill(bot,top,col){c.beginPath();c.moveTo(tx(h.t[0]),ty(bot(0)));for(let i=0;i<n;i++)c.lineTo(tx(h.t[i]),ty(top(i)));for(let i=n-1;i>=0;i--)c.lineTo(tx(h.t[i]),ty(bot(i)));c.closePath();c.fillStyle=col;c.fill()}
+  fill(()=>0,i=>h.P[i],'rgba(80,227,194,.12)');
+  fill(i=>h.P[i],i=>h.P[i]+h.K2[i],'rgba(245,166,35,.12)');
+  fill(i=>h.P[i]+h.K2[i],i=>h.P[i]+h.K2[i]+h.K1[i],'rgba(79,172,254,.12)');
+
+  function line(arr,col){c.beginPath();for(let i=0;i<n;i++)i?c.lineTo(tx(h.t[i]),ty(arr[i])):c.moveTo(tx(h.t[i]),ty(arr[i]));c.strokeStyle=col;c.lineWidth=1.3;c.stroke()}
+  line(h.K1,'#4facfe');line(h.K2,'#f5a623');line(h.P,'#50e3c2');line(h.E,'rgba(232,240,250,.5)');
+}
+
+/* ═══════════════ DRAW PHASE ═══════════════ */
+function drawPh(){
+  const c=cx.cPh,W=c._w,H=c._h;c.clearRect(0,0,W,H);
+  const hw=W/2;
+  c.strokeStyle='#1e2a42';c.lineWidth=1;c.beginPath();c.moveTo(hw,0);c.lineTo(hw,H);c.stroke();
+  onePhase(c,trTh,'#4facfe',0,hw,'m₁ (cercle)','position θ (rad)','vitesse θ\' (rad/τ)');
+  onePhase(c,trPh,'#f5a623',hw,hw,'m₂ (ellipse)','position φ (rad)','vitesse φ\' (rad/τ)');
+}
+function onePhase(c,tr,col,ox,w,title,xl,yl){
+  if(tr.length<2)return;const H=c._h,P={l:44,r:10,t:36,b:34};const gw=w-P.l-P.r,gh=H-P.t-P.b;
+  let xn=1e9,xx=-1e9,yn=1e9,yx=-1e9;tr.forEach(([x,y])=>{xn=min(xn,x);xx=max(xx,x);yn=min(yn,y);yx=max(yx,y)});
+  const sp=max(max(xx-xn,.2),max(yx-yn,.2))*.6;const xm=(xn+xx)/2,ym=(yn+yx)/2;
+  const tx=v=>ox+P.l+gw/2+(v-xm)/sp*gw*.45;const ty=v=>P.t+gh/2-(v-ym)/sp*gh*.45;
+
+  // zero axes with labels
+  c.strokeStyle='#1a2540';c.lineWidth=.5;
+  const y0=ty(0);
+  if(y0>P.t&&y0<P.t+gh){
+    c.beginPath();c.moveTo(ox+P.l,y0);c.lineTo(ox+P.l+gw,y0);c.stroke();
+    // "vitesse = 0" label on zero line
+    c.font='8px "DM Sans",sans-serif';c.fillStyle='#253045';c.textAlign='left';
+    c.fillText('vitesse = 0',ox+P.l+2,y0-3);
+  }
+  const x0=tx(0);
+  if(x0>ox+P.l&&x0<ox+P.l+gw){c.beginPath();c.moveTo(x0,P.t);c.lineTo(x0,P.t+gh);c.stroke()}
+
+  // trail with fade
+  const n=tr.length,fs=max(0,n-1200);
+  for(let i=fs+1;i<n;i++){
+    c.beginPath();
+    c.moveTo(tx(tr[i-1][0]),ty(tr[i-1][1]));
+    c.lineTo(tx(tr[i][0]),ty(tr[i][1]));
+    c.strokeStyle=col;c.globalAlpha=(i-fs)/(n-fs)*.6;c.lineWidth=1.2;c.stroke();
+  }
+  c.globalAlpha=1;
+
+  // current point with label
+  const last=tr[n-1];
+  const px=tx(last[0]),py=ty(last[1]);
+  c.beginPath();c.arc(px,py,5,0,2*PI);c.fillStyle=col;c.fill();
+  // "maintenant" label
+  c.font='600 8px "JetBrains Mono",monospace';c.fillStyle=col;c.textAlign='left';
+  c.fillText('●  maintenant',px+8,py+3);
+
+  // start point if visible
+  if(tr.length>20){
+    const first=tr[0];
+    const fx=tx(first[0]),fy=ty(first[1]);
+    c.beginPath();c.arc(fx,fy,3,0,2*PI);c.fillStyle='#5a6f8a';c.fill();
+    c.font='8px "DM Sans",sans-serif';c.fillStyle='#5a6f8a';c.textAlign='left';
+    c.fillText('t=0',fx+6,fy+3);
+  }
+
+  // title
+  c.font='600 10px "JetBrains Mono",monospace';c.fillStyle=col;c.textAlign='left';
+  c.fillText(title,ox+P.l,P.t+12);
+
+  // axis labels
+  c.font='9px "JetBrains Mono",monospace';c.fillStyle='#3d5070';c.textAlign='center';
+  c.fillText(xl,ox+P.l+gw/2,H-6);
+  c.save();c.translate(ox+6,P.t+gh/2);c.rotate(-PI/2);c.fillText(yl,0,0);c.restore();
+
+  // tick values
+  c.font='8px "JetBrains Mono",monospace';c.fillStyle='#2e3d56';c.textAlign='center';
+  c.fillText((xm-sp*.45).toFixed(1),ox+P.l,P.t+gh+12);
+  c.fillText((xm+sp*.45).toFixed(1),ox+P.l+gw,P.t+gh+12);
+}
+
+/* ═══════════════ DRAW GAUGE ═══════════════ */
+function drawG(){
+  const c=cx.cG,W=c._w,H=c._h;c.clearRect(0,0,W,H);
+  const p=phys();const e=nrg(S,p.mu);const E=max(e.E,1e-12);
+  const pd_={l:18,r:18};const bw=W-pd_.l-pd_.r,by=40,bh=22;
+  const wK1=(e.K1/E)*bw,wK2=(e.K2/E)*bw,wP=(e.P/E)*bw;
+  c.fillStyle='#4facfe';rr(c,pd_.l,by,wK1,bh,4,true,false);
+  c.fillStyle='#f5a623';if(wK2>.5)c.fillRect(pd_.l+wK1,by,wK2,bh);
+  c.fillStyle='#50e3c2';if(wP>.5)rr(c,pd_.l+wK1+wK2,by,wP,bh,4,false,true);
+  c.font='600 9px "JetBrains Mono",monospace';c.textAlign='center';c.fillStyle='#0a0e17';
+  [{v:e.K1/E,x:pd_.l+wK1/2,l:'K₁'},{v:e.K2/E,x:pd_.l+wK1+wK2/2,l:'K₂'},{v:e.P/E,x:pd_.l+wK1+wK2+wP/2,l:'P'}]
+    .forEach(q=>{if(q.v*bw>26)c.fillText(`${q.l} ${(q.v*100).toFixed(0)}%`,q.x,by+bh/2+3)});
+
+  // gauge
+  const gy=by+bh+28,gx=W/2,gr=min(50,W*.16);
+  c.beginPath();c.arc(gx,gy+55,gr,PI,0);c.strokeStyle='#1a2540';c.lineWidth=7;c.lineCap='round';c.stroke();
+  const lr=e.lR,nm=max(0,min(1,(lr-.5)/1)),ang=PI*(1-nm);
+  const lc=lr<.98?'#4facfe':lr>1.02?'#ff6b6b':'#50e3c2';
+  c.beginPath();c.arc(gx,gy+55,gr,PI,PI+(PI-ang));c.strokeStyle=lc;c.lineWidth=7;c.lineCap='round';c.stroke();
+  c.beginPath();c.arc(gx,gy+55,gr,-PI/2-.04,-PI/2+.04);c.strokeStyle='#50e3c2';c.lineWidth=3;c.stroke();
+  const nx=gx+gr*.6*cos(ang),ny=gy+55-gr*.6*sin(ang);
+  c.beginPath();c.moveTo(gx,gy+55);c.lineTo(nx,ny);c.strokeStyle='#e8f0fa';c.lineWidth=1.5;c.lineCap='round';c.stroke();
+  c.beginPath();c.arc(gx,gy+55,3,0,2*PI);c.fillStyle='#e8f0fa';c.fill();
+  c.font='600 12px "JetBrains Mono",monospace';c.fillStyle=lc;c.textAlign='center';
+  c.fillText(`l = ${fmt(lr*p.R,3)} m  (l/R = ${lr.toFixed(3)})`,gx,gy+55+18);
+  c.font='9px "DM Sans",sans-serif';c.fillStyle='#3d5070';
+  c.textAlign='right';c.fillText('comprimé',gx-gr-3,gy+55+3);
+  c.textAlign='left';c.fillText('étiré',gx+gr+3,gy+55+3);
+  c.textAlign='center';c.fillText('l₀ = '+p.R.toFixed(2)+' m',gx,gy+55-gr-8);
+
+  const showH=$('helpBtn').classList.contains('on');
+  const rowH=showH?28:18;const ty0=gy+80;
+  const rows=[
+    ['E totale',fmt(e.E*p.Escale,4)+' J','#e8f0fa','K₁+K₂+P. Constante si β = 0.'],
+    ['K₁ (m₁)',fmt(e.K1*p.Escale,4)+' J','#4facfe','½ m₁ v₁². Énergie de m₁ sur le cercle.'],
+    ['K₂ (m₂)',fmt(e.K2*p.Escale,4)+' J','#f5a623','Énergie cinétique de m₂ sur l\'ellipse.'],
+    ['P (ressort)',fmt(e.P*p.Escale,4)+' J','#50e3c2','½ k (l−l₀)². Nul si l = l₀.'],
+  ];
+  rows.forEach(([lbl,val,col,desc],i)=>{
+    const ry=ty0+i*rowH;
+    c.fillStyle='#5a6f8a';c.textAlign='left';c.font='10px "DM Sans",sans-serif';c.fillText(lbl,pd_.l,ry);
+    c.fillStyle=col;c.textAlign='right';c.font='500 10px "JetBrains Mono",monospace';c.fillText(val,W-pd_.r,ry);
+    if(showH){c.fillStyle='#2e3d56';c.textAlign='left';c.font='italic 9px "DM Sans",sans-serif';c.fillText(desc,pd_.l,ry+13)}
+  });
+  const dy=ty0+rows.length*rowH+10;
+  const beta=p.beta;const php=S[3],sph=sin(S[1]),cph=cos(S[1]);
+  const dE_adim=-beta/64*(9*sph*sph+cph*cph)*php*php;
+  const dE_J=dE_adim*p.Escale*p.omega0;
+  c.fillStyle='#5a6f8a';c.textAlign='left';c.font='10px "DM Sans",sans-serif';c.fillText('Dissipation :',pd_.l,dy);
+  c.fillStyle=beta===0?'#50e3c2':(dE_adim<-1e-6?'#ff6b6b':'#50e3c2');
+  c.textAlign='right';c.font='500 10px "JetBrains Mono",monospace';c.fillText(`${dE_J.toExponential(2)} W`,W-pd_.r,dy);
+  if(showH){c.fillStyle='#2e3d56';c.textAlign='left';c.font='italic 9px "DM Sans",sans-serif';c.fillText(beta===0?'β=0 → conservatif, puissance dissipée nulle.':'dE/dt en watts. Toujours ≤ 0 (friction sur m₂).',pd_.l,dy+13)}
+}
+function rr(c,x,y,w,h,r,l,ri){if(w<.5)return;const rl=l?r:0,rr_=ri?r:0;c.beginPath();c.moveTo(x+rl,y);c.lineTo(x+w-rr_,y);if(rr_)c.arcTo(x+w,y,x+w,y+rr_,rr_);else c.lineTo(x+w,y);c.lineTo(x+w,y+h-rr_);if(rr_)c.arcTo(x+w,y+h,x+w-rr_,y+h,rr_);else c.lineTo(x+w,y+h);c.lineTo(x+rl,y+h);if(rl)c.arcTo(x,y+h,x,y+h-rl,rl);else c.lineTo(x,y+h);c.lineTo(x,y+rl);if(rl)c.arcTo(x,y,x+rl,y,rl);else c.lineTo(x,y);c.closePath();c.fill()}
+
+/* ═══════════════ LOOP ═══════════════ */
+function frame(){if(run)step();drawSys();drawE();drawPh();drawG();requestAnimationFrame(frame)}
+
+/* ═══════════════ CONTROLS ═══════════════ */
+function togglePlay(){run=!run;$('btnPlay').textContent=run?'⏸ Pause':'▶ Play';$('btnPlay').classList.toggle('on',run)}
+function resetSim(){init()}
+function toggleHelp(){const btn=$('helpBtn');btn.classList.toggle('on');const on=btn.classList.contains('on');$('intro').classList.toggle('show',on);document.querySelectorAll('.prow-desc,.cell-sub').forEach(el=>el.classList.toggle('hidden',!on));setTimeout(resize,50)}
+
+/* ═══════════════ PRESETS ═══════════════ */
+const PRESETS=[
+  {R:1,m1:1,k:10,mu:1,b:0,t:.785,p:0,td:0,pd:2},
+  {R:1,m1:1,k:10,mu:1,b:.5,t:.785,p:0,td:0,pd:2},
+  {R:1,m1:1,k:10,mu:5,b:.3,t:1.047,p:.524,td:.5,pd:1},
+  {R:1,m1:1,k:10,mu:1,b:8,t:.785,p:0,td:0,pd:2},
+  {R:1,m1:1,k:10,mu:1,b:.5,t:0,p:0,td:1.5,pd:0},
+  {R:2,m1:0.5,k:50,mu:.3,b:.1,t:2,p:-1,td:-2,pd:3},
+];
+function preset(i){
+  const q=PRESETS[i];
+  $('sR').value=q.R;$('sM1').value=q.m1;$('sK').value=q.k;
+  $('sMu').value=q.mu;$('sBeta').value=q.b;
+  $('sTh0').value=q.t;$('sPh0').value=q.p;$('sThd0').value=q.td;$('sPhd0').value=q.pd;
+  labels();init();runAnalysis();drawDia();
+}
+
+/* ═══════════════ PRE-SIMULATION ANALYSIS ═══════════════ */
+function analyze(mu,beta,ic){
+  let y=[...ic];const dt=.02,steps=20000,tEnd=400;
+  const e0=nrg(y,mu);const E0=e0.E;
+  const K1_0=e0.K1, K2_0=e0.K2, P0=e0.P;
+
+  let tau90=-1,tau99=-1,tau50=-1;
+  let Ef=E0,K1f=e0.K1,K2f=e0.K2,Pf=e0.P;
+  let tdF=y[2],pdF=y[3];
+  let mxK1=0,mxK2=0,mxP=0;
+  let mxK1_tau=0,mxK2_tau=0;
+  let tdMx=abs(y[2]),pdMx=abs(y[3]);
+  let m2Stop=-1, m1Stop=-1;
+  // energy at a few checkpoints
+  let E_at={};
+  const checkpoints=[10,25,50,100,200];
+
+  for(let i=0;i<steps;i++){
+    y=rk4(y,dt,mu,beta);
+    const t=(i+1)*dt;
+    const e=nrg(y,mu);const Et=e.E;
+
+    if(E0>1e-8){
+      const lost=1-Et/E0;
+      if(tau50<0&&lost>.5)tau50=t;
+      if(tau90<0&&lost>.9)tau90=t;
+      if(tau99<0&&lost>.99)tau99=t;
+      if(Et>1e-8){
+        const f1=e.K1/Et,f2=e.K2/Et,fP=e.P/Et;
+        if(f1>mxK1){mxK1=f1;mxK1_tau=t}
+        if(f2>mxK2){mxK2=f2;mxK2_tau=t}
+        mxP=max(mxP,fP);
+      }
+    }
+    tdMx=max(tdMx,abs(y[2]));pdMx=max(pdMx,abs(y[3]));
+    if(m2Stop<0&&abs(y[3])<.01&&abs(y[2])>.05&&t>5)m2Stop=t;
+    if(m1Stop<0&&abs(y[2])<.01&&abs(y[3])>.05&&t>5)m1Stop=t;
+    if(i>steps*.85){Ef=Et;K1f=e.K1;K2f=e.K2;Pf=e.P;tdF=y[2];pdF=y[3]}
+
+    const tRound=Math.round(t);
+    if(checkpoints.includes(tRound)&&!E_at[tRound]) E_at[tRound]={E:Et,K1:e.K1,K2:e.K2,P:e.P};
+  }
+
+  return{E0,K1_0,K2_0,P0,Ef,K1f,K2f,Pf,tau50,tau90,tau99,
+         tdF,pdF,mxK1,mxK2,mxP,mxK1_tau,mxK2_tau,
+         tdMx,pdMx,m2Stop,m1Stop,mu,beta,E_at}
+}
+
+function genText(a,p){
+  const s=[]; // sections
+  const ts=t=>fmt(t*p.Tscale,2)+'s'; // tau → seconds
+  const eJ=e=>fmt(e*p.Escale,4)+'J'; // dimless → joules
+  const pct1=v=>(v*100).toFixed(0)+'%';
+  const pctLost=a.E0>1e-8?((1-a.Ef/a.E0)*100):0;
+
+  // ── 1. Résumé du scénario
+  let intro='Une masse m₁ = '+p.m1.toFixed(1)+'kg sur un cercle de rayon '+p.R.toFixed(2)+'m';
+  intro+=', reliée par un ressort (k = '+p.k.toFixed(1)+'N/m) à m₂ = '+p.m2.toFixed(1)+'kg sur une ellipse.';
+  if(a.beta===0) intro+=' Aucune friction.';
+  else intro+=' Friction sur m₂ : β = '+a.beta.toFixed(2)+' (α = '+fmt(p.alpha,2)+'N·s/m).';
+  s.push(intro);
+
+  // ── 2. Énergie initiale
+  const Ef1=a.K1_0/max(a.E0,1e-12), Ef2=a.K2_0/max(a.E0,1e-12);
+  let e0desc='Énergie initiale : '+eJ(a.E0);
+  if(Ef1>.9) e0desc+=' (quasi-toute dans K₁ : m₁ est lancée).';
+  else if(Ef2>.9) e0desc+=' (quasi-toute dans K₂ : m₂ est lancée).';
+  else if(Ef1<.1&&Ef2<.1) e0desc+=' (stockée dans le ressort).';
+  else e0desc+=' (K₁ '+pct1(Ef1)+', K₂ '+pct1(Ef2)+', P '+pct1(1-Ef1-Ef2)+').';
+  s.push(e0desc);
+
+  // ── 3. Évolution de l'énergie
+  if(a.beta===0){
+    s.push('Conservation : l\'énergie totale restera constante à '+eJ(a.E0)+'. On observera des transferts cycliques entre K₁, K₂ et P — le ressort redistribue en permanence.');
+    if(a.mxK1>.7&&a.mxK2>.7) s.push('Par moments K₁ atteint '+pct1(a.mxK1)+' et K₂ atteint '+pct1(a.mxK2)+' : transferts importants entre les deux masses.');
+  } else {
+    let evol='Dissipation : ';
+    if(pctLost>99){
+      evol+='l\'énergie sera presque totalement absorbée par la friction.';
+      if(a.tau50>0) evol+=' Moitié perdue en '+ts(a.tau50)+'.';
+      if(a.tau90>0) evol+=' À '+ts(a.tau90)+', 90% dissipés.';
+      if(a.tau99>0) evol+=' Quasi-arrêt à '+ts(a.tau99)+'.';
+    } else if(pctLost>50){
+      evol+=pctLost.toFixed(0)+'% de l\'énergie sera dissipée sur la durée simulée ('+ts(400)+').';
+      if(a.tau50>0) evol+=' Moitié perdue en '+ts(a.tau50)+'.';
+      if(a.tau90>0) evol+=' 90% en '+ts(a.tau90)+'.';
+    } else {
+      evol+='seulement '+pctLost.toFixed(0)+'% dissipés après '+ts(400)+'. Il reste '+eJ(a.Ef)+' sur '+eJ(a.E0)+' initiaux.';
+    }
+    s.push(evol);
+  }
+
+  // ── 4. État final et comportement remarquable
+  const Efmax=max(a.Ef,1e-12);
+  const f1=a.K1f/Efmax, f2=a.K2f/Efmax;
+
+  if(a.m2Stop>0&&abs(a.tdF)>.05){
+    s.push('Fait notable : m₂ s\'immobilise vers '+ts(a.m2Stop)+', mais m₁ continue de tourner à θ\' ≈ '+a.tdF.toFixed(2)+' rad/τ (v₁ ≈ '+fmt(abs(a.tdF)*p.Vscale,2)+'m/s). Comme m₁ n\'a pas de friction, son énergie cinétique ('+eJ(a.K1f)+', soit '+pct1(f1)+' du total) est piégée indéfiniment. Le ressort ne peut plus la drainer.');
+  } else if(a.beta>0&&abs(a.tdF)>.05&&abs(a.pdF)<.02){
+    s.push('m₁ garde une rotation résiduelle (θ\' ≈ '+a.tdF.toFixed(2)+', v ≈ '+fmt(abs(a.tdF)*p.Vscale,2)+'m/s) tandis que m₂ est au repos. Le couplage via le ressort est devenu inefficace dans cette configuration géométrique.');
+  } else if(a.beta>0&&abs(a.tdF)<.02&&abs(a.pdF)<.02&&a.Ef<a.E0*.01){
+    s.push('Les deux masses convergent vers le repos complet. L\'énergie résiduelle est négligeable ('+eJ(a.Ef)+').');
+  } else if(a.beta>0&&a.Ef>a.E0*.01){
+    let fin='À la fin de la simulation, il reste '+eJ(a.Ef)+' ('+pct1(1-pctLost/100)+' de l\'énergie initiale)';
+    if(f1>.7) fin+=', concentrée à '+pct1(f1)+' dans K₁.';
+    else if(f2>.7) fin+=', concentrée à '+pct1(f2)+' dans K₂.';
+    else fin+=', répartie entre K₁ ('+pct1(f1)+'), K₂ ('+pct1(f2)+') et P ('+pct1(1-f1-f2)+').';
+    s.push(fin);
+  }
+
+  // ── 5. Remarque physique si β très élevé
+  if(a.beta>3&&a.Ef>a.E0*.15){
+    s.push('Avec un amortissement aussi élevé (β = '+a.beta.toFixed(1)+'), la friction bloque m₂ presque instantanément, ce qui « déconnecte » le couplage. Paradoxalement, augmenter la friction peut ralentir la dissipation totale.');
+  }
+
+  return s.join('\n\n');
+}
+function runAnalysis(){
+  const p=phys();
+  const ic=[+$('sTh0').value,+$('sPh0').value,+$('sThd0').value,+$('sPhd0').value];
+  const a=analyze(p.mu,p.beta,ic);
+  $('predictBox').textContent=genText(a,p);
+}
+
+/* ═══════════════ LABELS ═══════════════ */
+function labels(){
+  const p=phys();
+  $('vR').textContent=p.R.toFixed(2)+' m';
+  $('vM1').textContent=p.m1.toFixed(2)+' kg';
+  $('vK').textContent=p.k.toFixed(1)+' N/m';
+  $('vMu').textContent=p.mu.toFixed(2);
+  $('vBeta').textContent=p.beta.toFixed(2);
+  $('vTh0').textContent=(+$('sTh0').value).toFixed(2)+' rad';
+  $('vPh0').textContent=(+$('sPh0').value).toFixed(2)+' rad';
+  $('vThd0').textContent=(+$('sThd0').value).toFixed(2)+' rad/τ';
+  $('vPhd0').textContent=(+$('sPhd0').value).toFixed(2)+' rad/τ';
+  $('vSpeed').textContent=(+$('sSpeed').value).toFixed(1)+'×';
+
+  // derived quantities
+  $('derivedBox').innerHTML=
+    `m₂ = μ·m₁ = <span class="v">${p.m2.toFixed(2)}</span> <span class="u">kg</span>`+
+    ` │ α = β√(km₁) = <span class="v">${fmt(p.alpha,3)}</span> <span class="u">N·s/m</span><br>`+
+    `ω₀ = √(k/m₁) = <span class="v">${p.omega0.toFixed(2)}</span> <span class="u">rad/s</span>`+
+    ` │ T₀ = 2π/ω₀ = <span class="v">${fmt(2*PI/p.omega0,3)}</span> <span class="u">s</span><br>`+
+    `l₀ = R = <span class="v">${p.R.toFixed(2)}</span> <span class="u">m</span>`+
+    ` │ ellipse : <span class="v">${fmt(p.a_semi,3)}</span> × <span class="v">${fmt(p.b_semi,3)}</span> <span class="u">m</span>`;
+}
+
+document.querySelectorAll('input[type=range]').forEach(el=>el.addEventListener('input',()=>{labels();drawDia()}));
+['sR','sM1','sK','sMu','sBeta','sTh0','sPh0','sThd0','sPhd0'].forEach(id=>$(id).addEventListener('change',()=>{init();runAnalysis();drawDia()}));
+
+/* ═══════════════ INIT ═══════════════ */
+resize();window.addEventListener('resize',resize);
+run=true;init();labels();runAnalysis();frame();
+</script>
+</body>
+</html>
