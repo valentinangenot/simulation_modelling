@@ -572,8 +572,14 @@ function frame(){if(run)step();drawSys();drawE();drawPh();drawG();requestAnimati
 /* ═══════════════ CONTROLS ═══════════════ */
 function togglePlay(){run=!run;$('btnPlay').textContent=run?'⏸ Pause':'▶ Play';$('btnPlay').classList.toggle('on',run)}
 function resetSim(){init()}
-function toggleHelp(){const btn=$('helpBtn');btn.classList.toggle('on');const on=btn.classList.contains('on');$('intro').classList.toggle('show',on);document.querySelectorAll('.prow-desc,.cell-sub').forEach(el=>el.classList.add('hidden'));;setTimeout(resize,50)}
-
+function toggleHelp(){
+  const btn=$('helpBtn');
+  btn.classList.toggle('on');
+  const on=btn.classList.contains('on');
+  $('intro').classList.toggle('show',on);
+  document.querySelectorAll('.prow-desc,.cell-sub').forEach(el=>el.classList.toggle('hidden',!on));
+  setTimeout(resize,50);
+}
 /* ═══════════════ PRESETS ═══════════════ */
 const PRESETS=[
   {R:1,m1:1,k:10,mu:1,b:0,t:.785,p:0,td:0,pd:2},
