@@ -141,31 +141,31 @@ La simulation est réalisée en variables <b>adimensionnées</b> (τ, Ê), tandi
 
     <div class="prow">
       <div class="prow-head"><span class="prow-name">R — rayon du cercle</span><span class="prow-val" id="vR">1.00 m</span></div>
-      <div class="prow-desc" id="dR">Rayon de la trajectoire circulaire de m₁. L'ellipse (3R/8 × R/8) et la longueur naturelle du ressort (l₀ = R) s'adaptent.</div>
+      <div class="prow-desc hidden" id="dR">Rayon de la trajectoire circulaire de m₁. L'ellipse (3R/8 × R/8) et la longueur naturelle du ressort (l₀ = R) s'adaptent.</div>
       <input type="range" id="sR" min="0.1" max="5" step="0.05" value="1">
     </div>
 
     <div class="prow">
       <div class="prow-head"><span class="prow-name">m₁</span><span class="prow-val" id="vM1">1.00 kg</span></div>
-      <div class="prow-desc" id="dM1">Pas de friction sur m₁.</div>
+      <div class="prow-desc hidden" id="dM1">Pas de friction sur m₁.</div>
       <input type="range" id="sM1" min="0.1" max="50" step="0.1" value="1">
     </div>
 
     <div class="prow">
       <div class="prow-head"><span class="prow-name">k — raideur du ressort</span><span class="prow-val" id="vK">10.0 N/m</span></div>
-      <div class="prow-desc" id="dK">Raideur du ressort linéaire. Plus k est grand, plus les oscillations sont rapides.</div>
+      <div class="prow-desc hidden" id="dK">Raideur du ressort linéaire. Plus k est grand, plus les oscillations sont rapides.</div>
       <input type="range" id="sK" min="1" max="1000" step="1" value="10">
     </div>
 
     <div class="prow">
       <div class="prow-head"><span class="prow-name">μ = m₂ / m₁</span><span class="prow-val" id="vMu">1.00</span></div>
-      <div class="prow-desc" id="dMu">Rapport de masse. Petit → m₂ légère relativement à m₁.</div>
+      <div class="prow-desc hidden" id="dMu">Rapport de masse. Petit → m₂ légère relativement à m₁.</div>
       <input type="range" id="sMu" min="0.05" max="10" step="0.05" value="1">
     </div>
 
     <div class="prow">
       <div class="prow-head"><span class="prow-name">β — amortissement adim.</span><span class="prow-val" id="vBeta">0.50</span></div>
-      <div class="prow-desc" id="dBeta">β = α / √(k·m₁). 0 = pas de friction, énergie conservée.</div>
+      <div class="prow-desc hidden" id="dBeta">β = α / √(k·m₁). 0 = pas de friction, énergie conservée.</div>
       <input type="range" id="sBeta" min="0" max="20" step="0.05" value="0.5">
     </div>
 
@@ -178,22 +178,22 @@ La simulation est réalisée en variables <b>adimensionnées</b> (τ, Ê), tandi
     <div class="ptitle">Conditions initiales (à t = 0)</div>
     <div class="prow">
       <div class="prow-head"><span class="prow-name">θ₀ — angle de m₁</span><span class="prow-val" id="vTh0">0.79 rad</span></div>
-      <div class="prow-desc" id="dTh0">Position de m₁ sur le cercle. 0 = droite, π/2 = haut.</div>
+      <div class="prow-desc hidden" id="dTh0">Position de m₁ sur le cercle. 0 = droite, π/2 = haut.</div>
       <input type="range" id="sTh0" min="-3.14" max="3.14" step="0.01" value="0.785">
     </div>
     <div class="prow">
       <div class="prow-head"><span class="prow-name">φ₀ — angle de m₂</span><span class="prow-val" id="vPh0">0.00 rad</span></div>
-      <div class="prow-desc" id="dPh0">Position de m₂ sur l'ellipse. </div>
+      <div class="prow-desc hidden" id="dPh0">Position de m₂ sur l'ellipse. </div>
       <input type="range" id="sPh0" min="-3.14" max="3.14" step="0.01" value="0">
     </div>
     <div class="prow">
       <div class="prow-head"><span class="prow-name">θ'₀ — vitesse angulaire m₁</span><span class="prow-val" id="vThd0">0.00 rad/τ</span></div>
-      <div class="prow-desc" id="dThd0">Élan initial de m₁. Positif = anti-horaire.</div>
+      <div class="prow-desc hidden" id="dThd0">Élan initial de m₁. Positif = anti-horaire.</div>
       <input type="range" id="sThd0" min="-4" max="4" step="0.05" value="0">
     </div>
     <div class="prow">
       <div class="prow-head"><span class="prow-name">φ'₀ — vitesse angulaire m₂</span><span class="prow-val" id="vPhd0">2.00 rad/τ</span></div>
-      <div class="prow-desc" id="dPhd0">Élan initial de m₂. Positif = anti-horaire.</div>
+      <div class="prow-desc hidden" id="dPhd0">Élan initial de m₂. Positif = anti-horaire.</div>
       <input type="range" id="sPhd0" min="-4" max="4" step="0.05" value="2">
     </div>
   </div>
