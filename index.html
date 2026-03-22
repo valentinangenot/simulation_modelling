@@ -214,12 +214,12 @@ La simulation est réalisée en variables <b>adimensionnées</b> (τ, Ê), tandi
     </div>
     <div class="btns">
       <button class="btn" onclick="preset(6)">Rapport (§6)</button>
+    </div>
+
     <div class="ptitle" style="margin-top:12px">Brève description de la simulation</div>
     <div class="predict-box" id="predictBox">Analyse en cours…</div>
   </div>
-      </div>
-
-
+  
 <div class="main">
   <div class="cell" id="cellSys">
     <div class="cell-lbl">Système physique</div>
@@ -590,7 +590,7 @@ const PRESETS=[
   {R:1,m1:1,k:10,mu:1,b:8,t:.785,p:0,td:0,pd:2},
   {R:1,m1:1,k:10,mu:1,b:.5,t:0,p:0,td:1.5,pd:0},
   {R:2,m1:0.5,k:50,mu:.3,b:.1,t:2,p:-1,td:-2,pd:3},
-  {R:1,m1:1,k:10,mu:1,b:0,t:1.5708,p:0,td:0.5,pd:4},
+  {R:1,m1:1,k:10,mu:1,b:0,t:1.5708,p:0,td:0.5,pd:4}
 ];
 function preset(i){
   const q=PRESETS[i];
