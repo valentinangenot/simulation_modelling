@@ -1033,6 +1033,7 @@ document.querySelectorAll('input[type=range]').forEach(el=>el.addEventListener('
 ['sR','sM1','sK','sMu','sBeta','sTh0','sPh0','sThd0','sPhd0'].forEach(id=>$(id).addEventListener('change',()=>{init();runAnalysis();drawDia()}));
 
 /* ═══════════════ INIT ═══════════════ */
+document.querySelectorAll('.prow-desc,.cell-sub').forEach(el=>el.classList.add('hidden'));
 resize();window.addEventListener('resize',resize);
 run=true;init();labels();runAnalysis();frame();
 </script>
